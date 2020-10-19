@@ -4,6 +4,8 @@ This is a simple timer to play [glass bead games](https://glassbeadgames.com/). 
 
 This is pretty thrown together too - but it should work a bit better!
 
+[Play online here](https://glassbead.seph.codes/)
+
 ## TODO
 
 - [x] Init rooms with the name of an archetopic in them with that archetopic
