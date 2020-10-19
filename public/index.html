@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset='utf-8'>
+	<meta name='viewport' content='width=device-width,initial-scale=1'>
+
+	<title>Glass bead game timer</title>
+
+	<link rel='icon' type='image/png' href='/favicon.png'>
+	<link rel='stylesheet' href='/global.css'>
+	<!-- <link rel='stylesheet' href='/build/bundle.css'> -->
+
+    <!-- <script defer src='/build/bundle.js'></script> -->
+    
+    <style>
+#container {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+#container > * {
+    /* display: inline-block; */
+    height: 10em;
+    border: 1px solid white;
+    margin: 20px;
+    /* width: 30%; */
+    min-width: 200px;
+    max-width: 30%;
+    padding: 1em;
+    line-height: 1.5;
+    /* justify-content: center; */
+}
+#host {
+}
+
+#join {
+}
+    </style>
+</head>
+
+<body>
+    <h1>
+        Glass bead game
+    </h1>
+
+    <script>
+        function foo(e) {
+            const room = document.getElementById('room').value
+            window.location.href = `rooms/${room}`
+            return false
+        }
+    </script>
+
+    <div id=container>
+        <a id=host href="rooms/_random">Host a new room</a>
+
+        <!-- This should really also be a svelte app, but I'm too lazy to set it up. -->
+        <form id=join onsubmit="return foo()">
+            <label>
+                Join room by name:
+                <input type=text id=room name=room>
+            </label>
+            <button>Go</button>
+            <p>The room will be created if it does not exist</p>
+        </form>
+    </div>
+    <!-- <a href="rooms/testroom">Test room</a> -->
+</body>
+</html>
