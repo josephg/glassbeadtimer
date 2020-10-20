@@ -73,7 +73,7 @@ const config = k => e => {
 	update_state({[k]: value})
 }
 
-const roundish = x => Math.round(x * 100) / 100
+const roundish = x => Math.round(x * 10) / 10
 
 
 const waiting_stage = { label: 'Waiting for game to start', duration: Infinity }
@@ -195,8 +195,10 @@ $: settings_disabled = state === 'playing'
 	{#if internal_state === 'loading'}
 		<h1>Loading game state</h1>
 	{:else}
-		<h1>Glass Bead Game Timer</h1>
-		<h4>Topic: <em>{topic}</em></h4>
+		<!-- <h1>Glass Bead Game Timer</h1> -->
+		<!-- <h1>{topic}</h1> -->
+		<h1>Topic: <em>{topic}</em></h1>
+		<!-- <h4>Topic: <em>{topic}</em></h4> -->
 		<h4>Room: <em>{room}</em> <a href="../..">(leave)</a></h4>
 		
 		<!-- <div>{connection} / {state}</div> -->
@@ -239,6 +241,10 @@ $: settings_disabled = state === 'playing'
 		<details id='config'>
 			<summary>Game controls</summary>
 
+			<div>
+				This will effect all players.
+			</div>
+
 			{#if internal_state == 'waiting'}
 				<button on:click={upd('state', 'playing')}>Start</button>
 			{:else if internal_state == 'playing'}
@@ -251,7 +257,8 @@ $: settings_disabled = state === 'playing'
 				<button on:click={upd('state', 'waiting')}>Reset game</button>
 			{/if}
 
-			<label>Topic
+			<label>
+				<span>Topic</span>
 				<input disabled={settings_disabled} type='text' value={topic} on:input={config('topic')} list='archetopics' >
 				<datalist id='archetopics'>
 					{#each ARCHETOPICS as topic}
@@ -260,23 +267,27 @@ $: settings_disabled = state === 'playing'
 				</datalist>
 			</label>
 
-			<label>1 minute meditation before game starts
+			<label>
+				<span>Pre-game meditation</span>
 				<input disabled={settings_disabled} type='checkbox' checked={meditate} on:input={config('meditate')} >
 			</label>
 
-			<label>Number of players
+			<label>
+				<span>Number of players</span>
 				<input disabled={settings_disabled} type='number' value={players} on:input={config('players')} min=1 max=12 >
 			</label>
 
-			<label>Number of rounds
+			<label>
+				<span>Number of rounds</span>
 				<input disabled={settings_disabled} type='number' value={rounds} on:input={config('rounds')} min=1 max=20>
 			</label>
 
-			<label>Seconds per bead
+			<label>
+				<span>Seconds per bead</span>
 				<input disabled={settings_disabled} type='number' value={seconds_per_bead} on:input={config('seconds_per_bead')}>
 			</label>
 
-			<div>
+			<div style='margin-top: 1em;'>
 				(Total game length: {roundish(
 					game_stages.reduce((x, s) => x + s.duration, 0) / 60
 				)} minutes)
@@ -286,6 +297,10 @@ $: settings_disabled = state === 'playing'
 </main>
 
 <style>
+
+main {
+	margin-bottom: 3em;
+}
 
 #config {
 	margin-top: 2em;
@@ -297,11 +312,6 @@ label {
 
 h1 {
 	margin-top: 1em;
-}
-
-button {
-	font-size: 140%;
-	margin: 10px 0;
 }
 
 #progresscontainer {
@@ -345,6 +355,35 @@ button {
 .active {
 	/* color: magenta; */
 	border: 1px solid white;
+}
+
+summary {
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+button {
+	font-size: 140%;
+	margin: 10px 0;
+	color: #330202; /* TODO: Use CSS variable for this */
+}
+
+details > :first-child {
+	margin-bottom: 1em;
+}
+
+label {
+	margin-bottom: 3px;
+}
+label > :first-child {
+	display: inline-block;
+	min-width: 12em;
+}
+
+input {
+	width: 7em;
+	font-size: 14px;
+	color: #330202;
 }
 
 </style>

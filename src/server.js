@@ -177,7 +177,11 @@ const assets = sirv(__dirname + '/../public', {
 
 polka()
 .get('/rooms/_random', (req, res) => {
-  const room = randomWords({exactly: 2, join: '-'})
+  let room, attempts = 0
+  do { // Try to generate a room that doesn't exist.
+    room = randomWords({exactly: 2, join: '-'})
+  } while (rooms.has(room) && ++attempts < 20)
+
   res.writeHead(307, {
     location: room
   })
