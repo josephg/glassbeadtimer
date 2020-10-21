@@ -110,8 +110,9 @@ const handle_events = async (req, res, parsed) => {
     // 30 second heartbeats to avoid timeouts
     while (connected) {
       await new Promise(res => setTimeout(res, 30*1000))
-      
-      res.write(`event: heartbeat\ndata: \n\n`);
+
+      // res.write(`event: heartbeat\ndata: \n\n`);
+      res.write(`data: {}\n\n`)
       res.flush()
     }
   })()
@@ -125,7 +126,7 @@ const handle_events = async (req, res, parsed) => {
     // res.write(`data: ${count}\nid: ${count}\n\n`);
     for await (const val of stream.iter) {
       // console.log('sending val', val)
-      res.write(`data: ${JSON.stringify(val)}\n\n`);
+      res.write(`data: ${JSON.stringify(val)}\n\n`)
       res.flush()
     }
   }
