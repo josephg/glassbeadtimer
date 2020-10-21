@@ -106,6 +106,16 @@ const handle_events = async (req, res, parsed) => {
     update_room(room, r => r.last_used = Date.now())
   })
 
+  ;(async () => {
+    // 30 second heartbeats to avoid timeouts
+    while (connected) {
+      res.write(`event: heartbeat\ndata: \n\n`);
+      res.flush()
+
+      await new Promise(res => setTimeout(res, 30*1000))
+    }
+  })()
+
   while (connected) {
     // await new Promise(resolve => setTimeout(resolve, 1000));
 

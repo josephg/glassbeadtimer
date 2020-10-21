@@ -126,7 +126,7 @@ let timer
 $: {
 	// Sadly we can't use internal_state here because it generates a cyclic dependancy.
 	let completed = current_stage ? current_stage.type === 'complete' : false
-	console.log('xx', state, timer, completed, current_stage)
+	// console.log('xx', state, timer, completed, current_stage)
 
 	// if (state !== 'loading') tick(false)
 
