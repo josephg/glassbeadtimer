@@ -109,10 +109,10 @@ const handle_events = async (req, res, parsed) => {
   ;(async () => {
     // 30 second heartbeats to avoid timeouts
     while (connected) {
+      await new Promise(res => setTimeout(res, 30*1000))
+      
       res.write(`event: heartbeat\ndata: \n\n`);
       res.flush()
-
-      await new Promise(res => setTimeout(res, 30*1000))
     }
   })()
 
