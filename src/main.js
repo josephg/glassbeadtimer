@@ -29,6 +29,7 @@ let state = {
 	paused_progress: 0,
 	seconds_per_bead: -1,
 	_active_sessions: -1,
+	_magister: null,
 }
 
 // const source = new EventSource('/events', { withCredentials: true })

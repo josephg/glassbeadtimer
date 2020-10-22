@@ -1,4 +1,6 @@
 const fs = require('fs')
+const crypto = require('crypto')
+const cookie = require('cookie')
 const sirv = require('sirv')
 const polka = require('polka')
 const compress = require('compression')
@@ -46,6 +48,8 @@ const default_room_data = name => ({
   players: 2,
   rounds: 5,
   seconds_per_bead: 60,
+  start_time: null,
+  paused_progress: null,
   // _active_sessions: 0,
   // _locked_by: ...
 })
@@ -56,6 +60,7 @@ const get_room = name => {
   if (r == null) {
     r = {
       clients: new Set(), // Set of asyncstreams.
+      magister_id: null, // If set, cookie_id of the user who has ownership over the game.
       value: default_room_data(name)
     }
     rooms.set(name, r)
@@ -68,6 +73,7 @@ const update_room = (name, fn) => {
 
   const patch = {}
   const new_clients = []
+  let magister_dirty = false
   // let dirty_clients = false
   const txn = {
     value: r.value,
@@ -76,29 +82,57 @@ const update_room = (name, fn) => {
       patch[k] = v
       r.value[k] = v
     },
+    reset_config() {
+      const new_val = default_room_data(name)
+      for (const k in new_val) {
+        this.set(k, new_val[k])
+      }
+    },
     add_client(client) {
       // dirty_clients = true
       new_clients.push(client)
       patch._active_sessions = r.clients.size + new_clients.length
+      // if (r.magister_id === client.cookie_id) update_magister = true
     },
     del_client(client) {
       // dirty_clients = true
       r.clients.delete(client)
       patch._active_sessions = r.clients.size + new_clients.length
+      if (r.magister_id === client.cookie_id) {
+        // Set the magister to be null, but only if the user doesn't have
+        // another tab open.
+        let found = false
+        for (const c of r.clients) {
+          if (c.cookie_id === client.cookie_id) found = true
+        }
+        if (!found) this.set_magister(null)
+        // r.magister_id = null
+        // update_magister = true
+      }
+    },
+    set_magister(cookie_id) {
+      r.magister_id = cookie_id
+      magister_dirty = true
     }
   }
 
   fn && fn(txn)
 
+  // console.log('appending val', patch)
   for (const c of r.clients) {
-    // console.log('appending val', val)
-    c.append(patch)
+    if (magister_dirty) {
+      c.stream.append({
+        ...patch,
+        _magister: r.magister_id == null ? null : c.cookie_id === r.magister_id
+      })
+    } else c.stream.append(patch)
   }
 
   for (const c of new_clients) {
-    c.append({
+    c.stream.append({
       ...r.value,
-      _active_sessions: r.clients.size + new_clients.length
+      _active_sessions: r.clients.size + new_clients.length,
+      _magister: r.magister_id == null ? null : c.cookie_id === r.magister_id
     })
     r.clients.add(c)
   }
@@ -122,12 +156,16 @@ const handle_events = async (req, res, parsed) => {
   let connected = true
   // const r = get_room(room)
   const stream = asyncstream()
+  const client = {
+    stream,
+    cookie_id: req.cookie_id
+  }
   // stream.append(get_room_snapshot(room))
 
   // r.clients.add(stream)
   update_room(room, txn => {
     txn.set('last_used', Date.now())
-    txn.add_client(stream)
+    txn.add_client(client)
   })
 
   res.once('close', () => {
@@ -135,7 +173,7 @@ const handle_events = async (req, res, parsed) => {
     connected = false
     update_room(room, txn => {
       txn.set('last_used', Date.now())
-      txn.del_client(stream)
+      txn.del_client(client)
     })
     stream.end()
   })
@@ -183,8 +221,12 @@ const handle_configure = (req, res) => {
       if (k.startsWith('_')) {
         // TODO: Reset
         switch (k) {
+          case '_reset':
+            txn.reset_config()
+            break
           case '_magister': // Magister Ludi
-            console.log('setting magister', req.cookie_id)
+            // console.log('setting magister', req.cookie_id)
+            txn.set_magister(v ? req.cookie_id : null)
             break;
           default:
             console.warn('Ignoring action', k)
@@ -232,6 +274,25 @@ const assets = sirv(__dirname + '/../public', {
 });
 
 polka()
+.use((req, res, next) => {
+  // console.log('cookies', req.headers['cookie'])
+  const cookies = cookie.parse(req.headers.cookie || '')
+  // console.log('cookies', cookies.id)
+  let id = cookies.id
+
+  if (id == null) {
+    id = crypto.randomBytes(12).toString('base64')
+    console.log('generated id', id)
+    // Just using a session cookie
+    res.setHeader('set-cookie', cookie.serialize('id', id, {
+      httpOnly: true,
+      sameSite: true,
+    }))
+  }
+
+  req.cookie_id = id
+  next()
+})
 .get('/rooms/_random', (req, res) => {
   let room, attempts = 0
   do { // Try to generate a room that doesn't exist.
@@ -271,7 +332,7 @@ const load = () => {
       // Gross. We should copy data in using the update_room method.
       // We'll discard any super old rooms.
       if (value.last_used > Date.now() - (1000 * 60 * 60 * 24 * 7)) {
-        rooms.set(name, {clients: new Set(), value})
+        rooms.set(name, {clients: new Set(), magister: null, value})
       } else {
         console.log('Discarding data for room', name)
       }

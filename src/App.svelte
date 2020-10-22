@@ -10,6 +10,7 @@ export let rounds
 export let seconds_per_bead
 export let paused_progress
 export let _active_sessions
+export let _magister
 
 // let game_completed = false // Derived from other properties
 
@@ -186,8 +187,30 @@ const progress_class = (stage, type, r, p) => {
 // This will get more complex in time. For now, pause the game to fiddle.
 $: settings_disabled = state === 'playing'
 
+let config_open = false
+
+$: if (_magister === true) config_open = true
+
+// The first user has the config open by default.
+$: if (_active_sessions === 1) config_open = true
+
+// The magister box is fully visible once there's a critical mass of players in the room
+$: magister_opaque = _magister === true || _active_sessions >= 6
+
+
 </script>
 
+<svelte:head>
+	{#if _magister}
+		<style>
+body {
+	background-color: var(--bg-highlight);
+}
+		</style>
+	{/if}
+</svelte:head>	
+
+<!-- <main class:magister={_magister}> -->
 <main>
 	<audio bind:this={round_audio} src="/lo-metal-tone.mp3" preload="auto"><track kind="captions"></audio>
 	<audio bind:this={complete_audio} src="/hi-metal-tone.mp3" preload="auto"><track kind="captions"></audio>
@@ -238,76 +261,98 @@ $: settings_disabled = state === 'playing'
 			{/each}
 		</div>
 
-		<details id='config'>
-			<summary>Game controls</summary>
+<!-- 
+		<div>
+			Magister status: {JSON.stringify(_magister)}
+		</div> -->
 
-			<div>
-				This will effect all players.
-			</div>
 
-			{#if internal_state == 'waiting'}
-				<button on:click={upd('state', 'playing')}>Start</button>
-			{:else if internal_state == 'playing'}
-				<button on:click={upd('state', 'paused')}>Pause</button>
-			{:else if internal_state == 'paused'}
-				<button on:click={upd('state', 'playing')}>Resume</button>
-			{/if}
+		{#if _magister == null || _magister == true}
+			<details class='config' bind:open={config_open}>
+				<summary>Game controls</summary>
 
-			{#if internal_state == 'paused' || internal_state == 'completed' }
-				<button on:click={upd('state', 'waiting')}>Reset game</button>
-			{/if}
+				<p>
+					{#if _magister == null}
+						This will effect all players. Will you borrow power? Will you steal it?
+					{:else}
+						You are master of the games. These controls are yours alone.
+					{/if}
+				</p>
 
-			<label>
-				<span>Topic</span>
-				<input disabled={settings_disabled} type='text' value={topic} on:input={config('topic')} list='archetopics' >
-				<datalist id='archetopics'>
-					{#each ARCHETOPICS as topic}
-						<option value={topic}>
-					{/each}
-				</datalist>
-			</label>
+				{#if internal_state == 'waiting'}
+					<button on:click={upd('state', 'playing')}>Start</button>
+				{:else if internal_state == 'playing'}
+					<button on:click={upd('state', 'paused')}>Pause</button>
+				{:else if internal_state == 'paused'}
+					<button on:click={upd('state', 'playing')}>Resume</button>
+				{/if}
 
-			<label>
-				<span>Pre-game meditation</span>
-				<input disabled={settings_disabled} type='checkbox' checked={meditate} on:input={config('meditate')} >
-			</label>
+				{#if internal_state == 'paused' || internal_state == 'completed' }
+					<button on:click={upd('state', 'waiting')}>Restart game</button>
+				{/if}
 
-			<label>
-				<span>Number of players</span>
-				<input disabled={settings_disabled} type='number' value={players} on:input={config('players')} min=1 max=12 >
-			</label>
+				<label>
+					<span>Topic</span>
+					<input disabled={settings_disabled} type='text' value={topic} on:input={config('topic')} list='archetopics' >
+					<datalist id='archetopics'>
+						{#each ARCHETOPICS as topic}
+							<option value={topic}>
+						{/each}
+					</datalist>
+				</label>
 
-			<label>
-				<span>Number of rounds</span>
-				<input disabled={settings_disabled} type='number' value={rounds} on:input={config('rounds')} min=1 max=20>
-			</label>
+				<label>
+					<span>Pre-game meditation</span>
+					<input disabled={settings_disabled} type='checkbox' checked={meditate} on:input={config('meditate')} >
+				</label>
 
-			<label>
-				<span>Seconds per bead</span>
-				<input disabled={settings_disabled} type='number' value={seconds_per_bead} on:input={config('seconds_per_bead')}>
-			</label>
+				<label>
+					<span>Number of players</span>
+					<input disabled={settings_disabled} type='number' value={players} on:input={config('players')} min=1 max=12 >
+				</label>
 
-			<div style='margin-top: 1em;'>
-				(Total game length: {roundish(
-					game_stages.reduce((x, s) => x + s.duration, 0) / 60
-				)} minutes)
-			</div>
-		</details>
+				<label>
+					<span>Number of rounds</span>
+					<input disabled={settings_disabled} type='number' value={rounds} on:input={config('rounds')} min=1 max=20>
+				</label>
+
+				<label>
+					<span>Seconds per bead</span>
+					<input disabled={settings_disabled} type='number' value={seconds_per_bead} on:input={config('seconds_per_bead')}>
+				</label>
+
+				<div style='margin-top: 1em;'>
+					(Total game length: {roundish(
+						game_stages.reduce((x, s) => x + s.duration, 0) / 60
+					)} minutes)
+				</div>
+
+				<div id='magister_box' class:magister_opaque>
+					{#if _magister == null}
+						<button on:click={upd('_magister', true)}>Assume the mantle of Magister Ludi</button>
+						<p><i>Advanced - for large games</i></p>
+						<p>When present, the Magister Ludi (master of the games) has exclusive control of the game.</p>
+					{:else if _magister == true}
+						<button on:click={upd('_magister', null)}>Abdicate Magister Ludi status</button>
+						<p>You are the master of the games. You have exclusive control over playing, pausing and configuring this game.</p>
+						<p>Do not close this browser window or you will be dethroned.</p>
+					{/if}
+				</div>
+			</details>
+		{:else}
+			<p class='config'>Magister Ludi is managing this game.</p>
+		{/if}
 	{/if}
 </main>
 
 <style>
 
 main {
-	margin-bottom: 3em;
+	/* margin-bottom: 3em; */
 }
 
-#config {
-	margin-top: 2em;
-}
-
-label {
-	display: block;
+.magister {
+	background-color: var(--bg-highlight);
 }
 
 h1 {
@@ -325,7 +370,7 @@ h1 {
 #progress_time {
 	position: absolute;
 	/* color: red; */
-	/* font-size: #330202; */
+	/* font-size: var(--bg-color); */
 	color: rgb(204,254,254);
 	/* color: white; */
 	font-size: 54px;
@@ -354,7 +399,14 @@ h1 {
 }
 .active {
 	/* color: magenta; */
-	border: 1px solid white;
+	/* border: 1px solid white; */
+	background-color: white;
+	color: var(--bg-color);
+}
+
+/***** Game config *****/
+.config {
+	margin-top: 2em;
 }
 
 summary {
@@ -365,7 +417,7 @@ summary {
 button {
 	font-size: 140%;
 	margin: 10px 0;
-	color: #330202; /* TODO: Use CSS variable for this */
+	color: var(--bg-color); /* TODO: Use CSS variable for this */
 }
 
 details > :first-child {
@@ -383,7 +435,33 @@ label > :first-child {
 input {
 	width: 7em;
 	font-size: 14px;
-	color: #330202;
+	color: var(--bg-color);
+}
+
+label {
+	display: block;
+}
+
+#magister_box {
+	border: 1px dashed white;
+	margin: 1em 0;
+	padding: 0.8em;
+	max-width: 500px;
+	background-color: var(--bg-highlight);
+	opacity: 40%;
+	transition: opacity 0.3s ease-out;
+}
+
+#magister_box.magister_opaque, #magister_box:hover {
+	opacity: 100%;
+}
+
+#magister_box > button {
+	display: block;
+	font-size: 100%;
+	width: 100%;
+	margin-top: 0;
+	padding: 3px 0;
 }
 
 </style>
