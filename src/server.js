@@ -345,10 +345,26 @@ const load = () => {
 load()
 
 process.on('SIGTERM', () => {
-  save()
+  // save()
   process.exit()
 })
 process.on('SIGINT', () => {
-  save()
+  // save()
   process.exit()
 })
+
+process.on('uncaughtException', e => {
+  console.error(e)
+  process.exit(1)
+})
+
+process.on('unhandledRejection', e => {
+  console.error(e)
+  process.exit(1)
+})
+
+process.on('exit', () => {
+  // console.log('exit')
+  save()
+})
+
