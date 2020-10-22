@@ -330,7 +330,7 @@ body {
 
 				<div id='magister_box' class:magister_opaque>
 					{#if _magister == null}
-						<button on:click={upd('_magister', true)}>Assume the mantle of Magister Ludi</button>
+						<button on:click={upd('_magister', true)}>Become Magister Ludi</button>
 						<p><i>Advanced - for large games</i></p>
 						<p>When present, the Magister Ludi (master of the games) has exclusive control of the game.</p>
 					{:else if _magister == true}
