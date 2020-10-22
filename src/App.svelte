@@ -11,6 +11,7 @@ export let seconds_per_bead
 export let paused_progress
 export let _active_sessions
 export let _magister
+export let _clock_offset
 
 // let game_completed = false // Derived from other properties
 
@@ -103,7 +104,7 @@ const tick = (play_audio) => {
 	console.log('tick')
 	// console.log('state', state, 'completed', state && state.complete)
 
-	const time = state === 'playing' ? Date.now() - start_time
+	const time = state === 'playing' ? Date.now() + _clock_offset - start_time
 		: state === 'paused' ? paused_progress
 		: 0
 	const {stage: new_stage, offset_sec: new_offs} = get_current_stage(time)

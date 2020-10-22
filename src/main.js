@@ -1,18 +1,5 @@
 import App from './App.svelte';
 
-// let state = {
-// 	connected: 'loading',
-// 	value: null
-// }
-
-
-// const update_state = (txn) => {
-// 	txn(state)
-// 	// And re-render!
-// 	app.$set(state)
-// }
-// export default app;
-
 const path = window.location.pathname.split('/')
 const room = path[path.length - 1]
 console.log('room', room)
@@ -30,6 +17,7 @@ let state = {
 	seconds_per_bead: -1,
 	_active_sessions: -1,
 	_magister: null,
+	_clock_offset: 0,
 }
 
 // const source = new EventSource('/events', { withCredentials: true })
@@ -70,9 +58,20 @@ const eventsUrl = `${room}/events`
 				app.$set({connection: 'connected'})
 			}
       source.onmessage = message => {
-				// console.log('Got', message.data)
 				
 				const data = JSON.parse(message.data)
+				// console.log('Got', data)
+
+				if (data._server_time) {
+					// Date.now() + offset = _server_time
+					const offset = data._server_time - Date.now()
+					if (offset > 800) {
+						console.warn(`Clock skew detected of ${offset}ms`)
+						data._clock_offset = offset
+					}
+					
+					delete data._server_time
+				}
 				// app.$set(data)
 				merge(data)
       }

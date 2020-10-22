@@ -132,7 +132,8 @@ const update_room = (name, fn) => {
     c.stream.append({
       ...r.value,
       _active_sessions: r.clients.size + new_clients.length,
-      _magister: r.magister_id == null ? null : c.cookie_id === r.magister_id
+      _magister: r.magister_id == null ? null : c.cookie_id === r.magister_id,
+      _server_time: Date.now(),
     })
     r.clients.add(c)
   }
