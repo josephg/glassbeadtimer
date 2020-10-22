@@ -309,17 +309,17 @@ body {
 
 				<label>
 					<span>Number of players</span>
-					<input disabled={settings_disabled} type='number' value={players} on:input={config('players')} min=1 max=12 >
+					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={players} on:input={config('players')} min=1 max=12 >
 				</label>
 
 				<label>
 					<span>Number of rounds</span>
-					<input disabled={settings_disabled} type='number' value={rounds} on:input={config('rounds')} min=1 max=20>
+					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={rounds} on:input={config('rounds')} min=1 max=20>
 				</label>
 
 				<label>
 					<span>Seconds per bead</span>
-					<input disabled={settings_disabled} type='number' value={seconds_per_bead} on:input={config('seconds_per_bead')}>
+					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={seconds_per_bead} on:input={config('seconds_per_bead')}>
 				</label>
 
 				<div style='margin-top: 1em;'>
@@ -330,7 +330,7 @@ body {
 
 				<div id='magister_box' class:magister_opaque>
 					{#if _magister == null}
-						<button on:click={upd('_magister', true)}>Become Magister Ludi</button>
+						<button on:click={upd('_magister', true)}>Assume the mantle of Magister Ludi</button>
 						<p><i>Advanced - for large games</i></p>
 						<p>When present, the Magister Ludi (master of the games) has exclusive control of the game.</p>
 					{:else if _magister == true}
