@@ -63,17 +63,44 @@ const get_room = name => {
   return r
 }
 
-const update_room = (name, txn) => {
+const update_room = (name, fn) => {
   const r = get_room(name)
-  txn && txn(r.value) // TODO: Light differential update here.
-  const val = {
-    ...r.value,
-    _active_sessions: r.clients.size
+
+  const patch = {}
+  const new_clients = []
+  // let dirty_clients = false
+  const txn = {
+    value: r.value,
+
+    set(k, v) {
+      patch[k] = v
+      r.value[k] = v
+    },
+    add_client(client) {
+      // dirty_clients = true
+      new_clients.push(client)
+      patch._active_sessions = r.clients.size + new_clients.length
+    },
+    del_client(client) {
+      // dirty_clients = true
+      r.clients.delete(client)
+      patch._active_sessions = r.clients.size + new_clients.length
+    }
   }
+
+  fn && fn(txn)
 
   for (const c of r.clients) {
     // console.log('appending val', val)
-    c.append(val)
+    c.append(patch)
+  }
+
+  for (const c of new_clients) {
+    c.append({
+      ...r.value,
+      _active_sessions: r.clients.size + new_clients.length
+    })
+    r.clients.add(c)
   }
 }
 
@@ -93,17 +120,24 @@ const handle_events = async (req, res, parsed) => {
   let count = 0;
 
   let connected = true
-  const r = get_room(room)
+  // const r = get_room(room)
   const stream = asyncstream()
-  r.clients.add(stream)
-  update_room(room, r => r.last_used = Date.now())
+  // stream.append(get_room_snapshot(room))
+
+  // r.clients.add(stream)
+  update_room(room, txn => {
+    txn.set('last_used', Date.now())
+    txn.add_client(stream)
+  })
 
   res.once('close', () => {
     console.log('closed')
     connected = false
-    r.clients.delete(stream)
+    update_room(room, txn => {
+      txn.set('last_used', Date.now())
+      txn.del_client(stream)
+    })
     stream.end()
-    update_room(room, r => r.last_used = Date.now())
   })
 
   ;(async () => {
@@ -141,38 +175,47 @@ const handle_configure = (req, res) => {
   // here.
 
   const parameters = req.body
-  update_room(room, r => {
+  update_room(room, txn => {
     for (const k in parameters) {
       let v = parameters[k]
+      const old_value = txn.value[k]
       // console.log('k', k, parameters[k])
-      if (r[k] == null) {
+      if (k.startsWith('_')) {
+        // TODO: Reset
+        switch (k) {
+          case '_magister': // Magister Ludi
+            console.log('setting magister', req.cookie_id)
+            break;
+          default:
+            console.warn('Ignoring action', k)
+        }
+      } else if (old_value == null) {
         console.warn('Ignoring unknown parameter', k)
-      } else if (v != null && r[k] !== v) {
+      } else if (v != null && old_value !== v) {
         // This is pretty dirty.
-        if (typeof r[k] === 'number' && typeof v === 'string') {
+        if (typeof old_value === 'number' && typeof v === 'string') {
           v = v|0
         }
         
-
         if (k === 'state') {
-          if (v === 'paused') r.paused_progress = Date.now() - r.start_time
-          else if (v === 'playing') {
-            if (r.paused_progress != null) {
-              r.start_time = Date.now() - r.paused_progress
-              r.paused_progress = null
-            } else r.start_time = Date.now() // TODO: Clean this up.
+          // TODO: Clean this up. Yikes.
+          if (v === 'paused') {
+            // ms since the game started.
+            txn.set('paused_progress', Date.now() - txn.value.start_time)
+          } else if (v === 'playing') {
+            if (txn.value.paused_progress != null) {
+              txn.set('start_time', Date.now() - txn.value.paused_progress)
+              txn.set('paused_progress', null)
+            } else txn.set('start_time', Date.now())
 
           } else if (v === 'waiting') {
-            r.start_time = r.paused_progress = null
+            txn.set('start_time', null)
+            txn.set('paused_progress', null)
           }
           console.log(`Game in room ${room} entered state ${v}`)
         }
 
-        if (k === '_reset') {
-          // TODO.
-        } else {
-          r[k] = v
-        }
+        txn.set(k, v)
       }
     }
   })
