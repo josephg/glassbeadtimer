@@ -42,13 +42,17 @@ a {
 /*********/
 
 :root {
-  --bg-color: #330202;
-  --bg-highlight: #1c0303;
+  /* --bg-color: #330202; */
+  --bg-color: white;
+  --fg-color: #484848;
+  /* --bg-highlight: #1c0303; */
+  --bg-highlight: #ccc;
+
 }
 
 body {
 	background-color: var(--bg-color);
-  color: #ececec;
+  color: var(--fg-color);
   
   /* margin-top: 1em;
   margin-bottom: 3em; */

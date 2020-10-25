@@ -22,10 +22,12 @@ npm start
 - [x] MAke the timer actually work (sound + animate)
 - [x] Save sessions on restart
 - [x] Make round display work
-- [ ] Lock users out of a room
+- [x] Lock users out of a room
 - [ ] Styling (I mean, this is never done... but its usable!)
 - [ ] Add archetopic logos
-- [ ] Deployment?
+- [x] Deployment?
+- [ ] Fix audio on iOS
+- [ ] Player labels
 
 
 # LICENSE

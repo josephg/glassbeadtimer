@@ -170,7 +170,7 @@ const handle_events = async (req, res, parsed) => {
   })
 
   res.once('close', () => {
-    console.log('closed')
+    console.log('Closed connection to client for room', room)
     connected = false
     update_room(room, txn => {
       txn.set('last_used', Date.now())
@@ -283,7 +283,7 @@ polka()
 
   if (id == null) {
     id = crypto.randomBytes(12).toString('base64')
-    console.log('generated id', id)
+    // console.log('generated id', id)
     // Just using a session cookie
     res.setHeader('set-cookie', cookie.serialize('id', id, {
       httpOnly: true,

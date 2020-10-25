@@ -249,9 +249,11 @@ body {
 		</div>
 
 		<div id='rounds'>
-			<h2>Game structure</h2>
+			<h2>Game</h2>
 			{#if meditate}
-				<div class={progress_class(current_stage, 'meditate')}>Meditation (1 min)</div>
+				<div>
+					<span class={progress_class(current_stage, 'meditate')}>Meditation (1 min)</span>
+				</div>
 			{/if}
 			{#each Array(Math.max(rounds, 0)) as _, r}
 				<div>Round {r+1}:
@@ -365,14 +367,14 @@ h1 {
 	position: relative;
 	margin: 25px;
 	height: 5em;
-	border: 2px solid white;
+	border: 2px solid var(--fg-color);
 }
 
 #progress_time {
 	position: absolute;
 	/* color: red; */
 	/* font-size: var(--bg-color); */
-	color: rgb(204,254,254);
+	color: white;
 	/* color: white; */
 	font-size: 54px;
 	margin-left: 5px;
@@ -380,7 +382,7 @@ h1 {
 }
 
 #progress {
-	background-color: white;
+	background-color: var(--fg-color);
 	/* width: 50%; */
 	height: 100%;
 	/* transition: width 1s linear; */
@@ -389,7 +391,7 @@ h1 {
 
 .bead {
 	margin-right: 1em;
-	padding: 0 4px;
+	padding: 2px 4px;
 }
 .done {
 	text-decoration: line-through;
@@ -401,7 +403,7 @@ h1 {
 .active {
 	/* color: magenta; */
 	/* border: 1px solid white; */
-	background-color: white;
+	background-color: var(--fg-color);
 	color: var(--bg-color);
 }
 
@@ -418,7 +420,7 @@ summary {
 button {
 	font-size: 140%;
 	margin: 10px 0;
-	color: var(--bg-color); /* TODO: Use CSS variable for this */
+	color: var(--fg-color); /* TODO: Use CSS variable for this */
 }
 
 details > :first-child {
@@ -435,8 +437,13 @@ label > :first-child {
 
 input {
 	width: 7em;
-	font-size: 14px;
-	color: var(--bg-color);
+	font-size: 16px;
+	/* color: var(--bg-color); */
+	border: 2px solid #686868;
+}
+
+input[type=checkbox] {
+	height: 1em;
 }
 
 label {
@@ -444,7 +451,7 @@ label {
 }
 
 #magister_box {
-	border: 1px dashed white;
+	border: 1px dashed var(--fg-color);
 	margin: 1em 0;
 	padding: 0.8em;
 	max-width: 500px;

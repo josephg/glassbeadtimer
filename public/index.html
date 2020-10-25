@@ -24,9 +24,10 @@ body {
     flex-wrap: wrap;
 }
 #container > * {
+    text-align: center;
     /* display: inline-block; */
     min-height: 10em;
-    border: 1px solid white;
+    border: 2px solid var(--fg-color);
     margin: 20px;
     /* width: 30%; */
     min-width: 200px;
@@ -35,6 +36,18 @@ body {
     line-height: 1.5;
     /* justify-content: center; */
 }
+
+input {
+    display: inline-block;
+    margin: 5px 0;
+    border: 2px solid #cecece;
+    font-size: 100%;
+}
+
+button {
+    font-size: 120%;
+}
+
 #host {
 }
 
@@ -59,9 +72,11 @@ body {
     </h2>
 
     <script>
-        function foo(e) {
+        function go_to_room(e) {
             const room = document.getElementById('room').value.trim()
-            window.location.href = `rooms/${room}`
+            if (room !== '') {
+                window.location.href = `rooms/${room}`
+            }
             return false
         }
     </script>
@@ -70,13 +85,13 @@ body {
         <a id=host href="rooms/_random">Host a new room</a>
 
         <!-- This page should probably also be a svelte app, but I'm too lazy to set it up. -->
-        <form id=join onsubmit="return foo()">
+        <form id=join onsubmit="return go_to_room()">
             <label>
                 Join room by name:
                 <input type=text id=room name=room>
             </label>
             <button>Go</button>
-            <div style="margin-top: 1em;">Room will be created if it does not exist</div>
+            <div style="margin-top: 0.5em;">Room will be created if it does not exist</div>
         </form>
     </div>
     
