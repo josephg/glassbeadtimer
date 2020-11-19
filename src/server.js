@@ -7,6 +7,7 @@ const compress = require('compression')
 const asyncstream = require('ministreamiterator')
 const bodyParser = require('body-parser')
 const randomWords = require('random-words')
+const accepts = require('accepts')
 
 // import sirv from 'sirv'
 // import polka, { Middleware } from 'polka'
@@ -122,24 +123,33 @@ const update_room = (name, fn) => {
   for (const c of r.clients) {
     if (magister_dirty) {
       c.stream.append({
-        ...patch,
-        _magister: r.magister_id == null ? null : c.cookie_id === r.magister_id
+        data: {
+          ...patch,
+          _magister: r.magister_id == null ? null : c.cookie_id === r.magister_id
+        }
       })
-    } else c.stream.append(patch)
+    } else c.stream.append({data: patch})
   }
 
   for (const c of new_clients) {
     c.stream.append({
-      ...r.value,
-      _active_sessions: r.clients.size + new_clients.length,
-      _magister: r.magister_id == null ? null : c.cookie_id === r.magister_id,
-      _server_time: Date.now(),
+      headers: {
+        'x-braid-version': '0.1',
+        'content-type': 'application/json',
+        'x-patch-type': 'update-keys'
+      },
+      data: {
+        ...r.value,
+        _active_sessions: r.clients.size + new_clients.length,
+        _magister: r.magister_id == null ? null : c.cookie_id === r.magister_id,
+        _server_time: Date.now(),
+      }
     })
     r.clients.add(c)
   }
 }
 
-const handle_events = async (req, res, parsed) => {
+const handle_events = async (req, res) => {
   const {room} = req.params
   console.log('Got client for room', room);
   // console.log(req.headers)
@@ -186,8 +196,8 @@ const handle_events = async (req, res, parsed) => {
 
       if (!connected) break
       
-      // res.write(`event: heartbeat\ndata: \n\n`);
-      res.write(`data: {}\n\n`)
+      res.write(`event: heartbeat\ndata: \n\n`);
+      // res.write(`data: {}\n\n`)
       res.flush()
     }
   })()
@@ -309,7 +319,12 @@ polka()
 .post('/rooms/:room/configure', bodyParser.json(), handle_configure)
 // .use(assets)
 .use(compress(), assets)
-.get('/rooms/:room', sirv(__dirname + '/../public', {single: 'room.html'}))
+.get('/rooms/:room', (req, ...args) => {
+  // console.log('get', req.accepted)
+  accepts(req).type('text/html')
+    ? sirv(__dirname + '/../public', {single: 'room.html'})(req, ...args)
+    : handle_events(req, ...args)
+})
 // .use('/api', require('./api'))
 
 .listen(PORT, err => {
