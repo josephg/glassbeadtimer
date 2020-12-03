@@ -420,7 +420,8 @@ summary {
 button {
 	font-size: 140%;
 	margin: 10px 0;
-	color: var(--fg-color); /* TODO: Use CSS variable for this */
+	color: var(--bg-color);
+	/* color: var(--fg-color); */
 }
 
 details > :first-child {

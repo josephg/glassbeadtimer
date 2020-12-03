@@ -42,11 +42,12 @@ a {
 /*********/
 
 :root {
-  /* --bg-color: #330202; */
-  --bg-color: white;
-  --fg-color: #484848;
-  /* --bg-highlight: #1c0303; */
-  --bg-highlight: #ccc;
+  --bg-color: #330202;
+  /* --bg-color: white; */
+  /* --fg-color: #484848; */
+  --fg-color: #fcffe9;
+  --bg-highlight: #1c0303;
+  /* --bg-highlight: #ccc; */
 
 }
 
