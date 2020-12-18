@@ -227,7 +227,6 @@ body {
 	{:else}
 		<!-- <h1>Glass Bead Game Timer</h1> -->
 		<!-- <h1>{topic}</h1> -->
-		<h1>{topic}</h1>
 
 		<div id='topicimg' bind:this={topic_img}></div>
 
@@ -246,6 +245,8 @@ body {
 		<details>
 			<!-- I'm not ready to delete these UI elements but we might not use them -->
 			<summary>Other stuff</summary>
+
+			<h1>{topic}</h1>
 			<h4>Room: <em>{room}</em> <a href="../..">(leave)</a></h4>
 
 			<div>
