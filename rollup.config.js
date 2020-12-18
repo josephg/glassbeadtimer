@@ -1,6 +1,7 @@
 import svelte from 'rollup-plugin-svelte';
 import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
+import json from '@rollup/plugin-json';
 import livereload from 'rollup-plugin-livereload';
 import { terser } from 'rollup-plugin-terser';
 
@@ -45,6 +46,8 @@ export default {
 				css.write('bundle.css');
 			}
 		}),
+
+		json(),
 
 		// If you have external dependencies installed from
 		// npm, you'll most likely need these plugins. In

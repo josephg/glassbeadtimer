@@ -1,4 +1,5 @@
 <script>
+import * as topicIcons from './topics.json'
 export let room
 export let connection
 export let state // loading, waiting, playing, paused.
@@ -17,6 +18,7 @@ export let _clock_offset
 
 let round_audio
 let complete_audio
+let topic_img
 
 	// export let state
 
@@ -25,6 +27,10 @@ const ARCHETOPICS = [
   'Ego', 'Attention', 'Art', 'Empathy', 'Eutopia', 'Future', 'Game', 'Gift',
   'History', 'Cosmos', 'Time', 'Life', 'Addiction', 'Paradox', 'Shadow', 'Society'
 ]
+
+$: {
+	if (topic_img) topic_img.innerHTML = topicIcons[topic.toLocaleLowerCase()]
+}
 
 // Could make configurable. Eh.
 const MEDITATION_SECONDS = 60
@@ -193,7 +199,7 @@ let config_open = false
 $: if (_magister === true) config_open = true
 
 // The first user has the config open by default.
-$: if (_active_sessions === 1) config_open = true
+// $: if (_active_sessions === 1) config_open = true
 
 // The magister box is fully visible once there's a critical mass of players in the room
 $: magister_opaque = _magister === true || _active_sessions >= 6
@@ -221,26 +227,9 @@ body {
 	{:else}
 		<!-- <h1>Glass Bead Game Timer</h1> -->
 		<!-- <h1>{topic}</h1> -->
-		<h1>Topic: <em>{topic}</em></h1>
-		<!-- <h4>Topic: <em>{topic}</em></h4> -->
-		<h4>Room: <em>{room}</em> <a href="../..">(leave)</a></h4>
-		
-		<!-- <div>{connection} / {state}</div> -->
-		<div>
-			{state === 'waiting' ? 'Waiting for the game to start'
-			: state === 'paused' ? 'GAME PAUSED'
-			: state === 'playing' ? 'Game in progress'
-			: ''}
-		</div>
-		{#if connection !== 'connected'}
-			<div>DISCONNECTED FROM GAME SERVER</div>
-		{:else}
-			{#if _active_sessions == 1}
-				<div>You are alone in the room</div>
-			{:else}
-				<div>{_active_sessions} players are in this room</div>
-			{/if}
-		{/if}
+		<h1>{topic}</h1>
+
+		<div id='topicimg' bind:this={topic_img}></div>
 
 		<h1>{stage_label}</h1>
 		<div id='progresscontainer'>
@@ -248,31 +237,54 @@ body {
 			<div id='progress' style='width: {bar_width}%'></div>
 		</div>
 
-		<div id='rounds'>
-			<h2>Game</h2>
-			{#if meditate}
-				<div>
-					<span class={progress_class(current_stage, 'meditate')}>Meditation (1 min)</span>
-				</div>
+		{#if (_magister == null || _magister == true) && internal_state == 'waiting'}
+			<button on:click={upd('state', 'playing')}>Start</button>
+		{/if}
+
+		<div style='height: 400px;'></div>
+
+		<details>
+			<!-- I'm not ready to delete these UI elements but we might not use them -->
+			<summary>Other stuff</summary>
+			<h4>Room: <em>{room}</em> <a href="../..">(leave)</a></h4>
+
+			<div>
+				{state === 'waiting' ? 'Waiting for the game to start'
+				: state === 'paused' ? 'GAME PAUSED'
+				: state === 'playing' ? 'Game in progress'
+				: ''}
+			</div>
+			{#if connection !== 'connected'}
+				<div>DISCONNECTED FROM GAME SERVER</div>
+			{:else}
+				{#if _active_sessions == 1}
+					<div>You are alone in the room</div>
+				{:else}
+					<div>{_active_sessions} players are in this room</div>
+				{/if}
 			{/if}
-			{#each Array(Math.max(rounds, 0)) as _, r}
-				<div>Round {r+1}:
-					{#each Array(Math.max(players, 0)) as _, p}
-						<span class={'bead ' + progress_class(current_stage, 'bead', r, p)}>{p+1} </span>
-					{/each}
-				</div>
-			{/each}
-		</div>
-
-<!-- 
-		<div>
-			Magister status: {JSON.stringify(_magister)}
-		</div> -->
-
+	
+			<div id='rounds'>
+				<h2>Game</h2>
+				{#if meditate}
+					<div>
+						<span class={progress_class(current_stage, 'meditate')}>Meditation (1 min)</span>
+					</div>
+				{/if}
+				{#each Array(Math.max(rounds, 0)) as _, r}
+					<div>Round {r+1}:
+						{#each Array(Math.max(players, 0)) as _, p}
+							<span class={'bead ' + progress_class(current_stage, 'bead', r, p)}>{p+1} </span>
+						{/each}
+					</div>
+				{/each}
+			</div>
+	
+		</details>
 
 		{#if _magister == null || _magister == true}
 			<details class='config' bind:open={config_open}>
-				<summary>Game controls</summary>
+				<summary>Advanced controls</summary>
 
 				<p>
 					{#if _magister == null}
@@ -352,6 +364,12 @@ body {
 
 main {
 	/* margin-bottom: 3em; */
+	text-align: center;
+}
+
+#topicimg {
+	max-width: 300px;
+	display: inline-block;
 }
 
 .magister {
