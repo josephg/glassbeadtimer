@@ -50,7 +50,7 @@ $: {
 	for (let r = 0; r < rounds; r++) {
 		for (let p = 0; p < players; p++) {
 			game_stages.push({
-				label: `Round ${r+1} player ${p+1}`,
+				label: players > 1 ? `Round ${r+1} player ${p+1}` : `Round ${r+1}`,
 				duration: seconds_per_bead,
 				type: 'bead', r, p
 			})
@@ -369,7 +369,7 @@ main {
 }
 
 #topicimg {
-	max-width: 300px;
+	width: 300px;
 	display: inline-block;
 }
 
@@ -472,7 +472,8 @@ label {
 
 #magister_box {
 	border: 1px dashed var(--fg-color);
-	margin: 1em 0;
+	/* margin: 1em 0; */
+	margin: 1em auto;
 	padding: 0.8em;
 	max-width: 500px;
 	background-color: var(--bg-highlight);

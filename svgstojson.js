@@ -15,7 +15,8 @@ const out = {}
     // console.log(dirent.name, name);
     let content = fs.readFileSync(`${PATH}/${dirent.name}`, 'utf-8')
 
-    content = content.replace('#fff', '#000')
+    // content = content.replace('#fff', '#000')
+    content = content.replace('#fff', 'var(--bg-color)')
     content = content.replace('#231f20', '#fff')
     // console.log(content)
 
