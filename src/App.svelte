@@ -53,7 +53,7 @@ const MEDITATION_SECONDS = 60
 
 interface GameStage {
 	label: string,
-	type: 'waiting' | 'bead' | 'meditate' | 'complete',
+	type: 'waiting' | 'bead' | 'meditate' | 'contemplation' | 'complete',
 	duration: number,
 	no_sound?: true,
 	r?: number, p?: number
@@ -74,6 +74,12 @@ $: {
 	})
 	for (let r = 0; r < game_config.rounds; r++) {
 		for (let p = 0; p < game_config.players; p++) {
+			if (game_config.seconds_between_bead && (r > 0 || p > 0)) game_stages.push({
+				label: 'Breathe',
+				duration: game_config.seconds_between_bead,
+				type: 'bead'
+			})
+
 			game_stages.push({
 				label: game_config.players > 1 ? `Round ${r+1} player ${p+1}` : `Round ${r+1}`,
 				duration: game_config.seconds_per_bead,
@@ -81,6 +87,14 @@ $: {
 			})
 		}
 	}
+
+	if (game_config.contemplation) game_stages.push({
+		label: "Contemplate the game's passing",
+		type: 'contemplation',
+		duration: MEDITATION_SECONDS,
+	})
+
+	console.log('game stages', game_stages, game_config.seconds_between_bead)
 }
 
 // TODO: The protocol for these update methods doesn't use game_state properly.
@@ -150,7 +164,7 @@ const tick = (play_audio: boolean) => {
 		// if (!state.complete) round_audio.play()
 
 		if (play_audio && !new_stage.no_sound) {
-			if (current_stage.type === 'complete') complete_audio.play()
+			if (current_stage.type === 'complete' || current_stage.type === 'contemplation') complete_audio.play()
 			else round_audio.play()
 		}
 	}
@@ -356,6 +370,11 @@ body {
 				</label>
 
 				<label>
+					<span>Post game contemplation</span>
+					<input disabled={settings_disabled} type='checkbox' checked={game_config.contemplation} on:input={config('contemplation')} >
+				</label>
+
+				<label>
 					<span>Number of players</span>
 					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.players} on:input={config('players')} min=1 max=12 >
 				</label>
@@ -368,6 +387,11 @@ body {
 				<label>
 					<span>Seconds per bead</span>
 					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.seconds_per_bead} on:input={config('seconds_per_bead')}>
+				</label>
+
+				<label>
+					<span>Seconds between beads</span>
+					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.seconds_between_bead} on:input={config('seconds_between_bead')}>
 				</label>
 
 				<div style='margin-top: 1em;'>
@@ -406,9 +430,9 @@ main {
 	display: inline-block;
 }
 
-.magister {
+/* .magister {
 	background-color: var(--bg-highlight);
-}
+} */
 
 h1 {
 	margin-top: 1em;
@@ -441,23 +465,21 @@ h1 {
 }
 
 
-.bead {
+/* .bead {
 	margin-right: 1em;
 	padding: 2px 4px;
 }
 .done {
 	text-decoration: line-through;
 	color: #888;
-}
+} */
 /* .waiting {
 	color: #888;
 } */
-.active {
-	/* color: magenta; */
-	/* border: 1px solid white; */
+/* .active {
 	background-color: var(--fg-color);
 	color: var(--bg-color);
-}
+} */
 
 /***** Game config *****/
 .config {
@@ -485,7 +507,7 @@ label {
 }
 label > :first-child {
 	display: inline-block;
-	min-width: 12em;
+	min-width: 14em;
 }
 
 input {

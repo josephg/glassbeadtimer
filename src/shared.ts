@@ -4,9 +4,15 @@ export interface GameConfig {
 	start_time: number,
 	topic: string,
 	meditate: boolean,
+	/** Post session 1 minute contemplation */
+	contemplation: boolean,
+
+	/** Number of players. Set to 1 to just set the number of rounds directly. */
 	players: number,
 	rounds: number,
 	seconds_per_bead: number,
+	/** Set to 0 to disable */
+	seconds_between_bead: number,
 	paused_progress?: number,
 }
 

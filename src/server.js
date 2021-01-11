@@ -46,10 +46,13 @@ const default_room_data = name => ({
 
   topic: topic_from_name(name),
   meditate: true,
+  contemplation: true,
   players: 2,
   rounds: 5,
   seconds_per_bead: 60,
+  seconds_between_bead: 0,
   paused_progress: null,
+
   // _active_sessions: 0,
   // _locked_by: ...
 })
@@ -360,7 +363,14 @@ const load = () => {
       // Gross. We should copy data in using the update_room method.
       // We'll discard any super old rooms.
       if (game_config.last_used > Date.now() - (1000 * 60 * 60 * 24 * 7)) {
-        rooms.set(name, {clients: new Set(), magister: null, game_config})
+        rooms.set(name, {
+          clients: new Set(),
+          magister: null,
+          game_config: {
+            ...default_room_data(),
+            ...game_config
+          }
+        })
       } else {
         console.log('Discarding data for room', name)
       }
