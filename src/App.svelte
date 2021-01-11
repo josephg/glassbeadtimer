@@ -1,11 +1,14 @@
-<script>
+<script lang="ts">
+import type { HtmlTag } from 'svelte/internal';
+import type { GameConfig } from './shared';
+
 import * as topicIcons from './topics.json'
 
-export let room
+export let room: string
 
-export let connection
+export let connection: 'waiting' | 'connecting' | 'connected'
 
-export let game_config
+export let game_config: GameConfig
 // export let state // loading, waiting, playing, paused.
 // export let start_time
 // export let topic
@@ -15,17 +18,17 @@ export let game_config
 // export let seconds_per_bead
 // export let paused_progress
 
-export let _active_sessions
-export let _magister
-export let _clock_offset
+export let _active_sessions: number
+export let _magister: true | null
+export let _clock_offset: number
 
 // let game_completed = false // Derived from other properties
 
-let round_audio
-let complete_audio
-let topic_img
+let round_audio: HTMLAudioElement
+let complete_audio: HTMLAudioElement
+let topic_img: HTMLElement
 
-let state
+let state: GameConfig['state']
 $: state = game_config.state
 
 $: console.log('Game configuration changed', game_config)
@@ -40,7 +43,7 @@ const ARCHETOPICS = [
 
 $: {
 	if (topic_img) {
-		const svgContent = topicIcons[game_config.topic.toLocaleLowerCase()]
+		const svgContent = topicIcons[game_config.topic.toLocaleLowerCase() as keyof typeof topicIcons]
 		if (svgContent) topic_img.innerHTML = svgContent
 	}
 }
@@ -48,10 +51,19 @@ $: {
 // Could make configurable. Eh.
 const MEDITATION_SECONDS = 60
 
-let game_stages = []
+interface GameStage {
+	label: string,
+	type: 'waiting' | 'bead' | 'meditate' | 'complete',
+	duration: number,
+	no_sound?: true,
+	r?: number, p?: number
+}
+
+let game_stages: GameStage[] = []
 $: {
 	game_stages = [{
 		label: `${game_config.meditate ? 'Meditation' : 'Game'} is about to start`,
+		type: 'waiting',
 		duration: 3,
 		no_sound: true
 	}]
@@ -72,7 +84,7 @@ $: {
 }
 
 // TODO: The protocol for these update methods doesn't use game_state properly.
-const update_state = async patch => {
+const update_state = async (patch: Record<string, string | number | boolean | null>) => {
 	await fetch(`${room}/configure`, {
 		method: 'POST',
 		mode: 'same-origin',
@@ -83,24 +95,25 @@ const update_state = async patch => {
 	})
 }
 
-const upd = (k, v) => () => update_state({[k]: v})
+const upd = (k: string, v: string | number | boolean | null) => () => update_state({[k]: v})
 
-const config = k => e => {
+const config = (k: string): svelte.JSX.FormEventHandler<HTMLInputElement> => (e) => {
 	// console.log('k', k, e.data, e.value, e.target.value, e.target.type)
-	const raw_value = e.target.value
-	const value = e.target.type === 'number' ? raw_value|0
-		: e.target.type === 'checkbox' ? e.target.checked
+	const target = e.target as HTMLInputElement
+	const raw_value = target.value
+	const value = target.type === 'number' ? ~~raw_value
+		: target.type === 'checkbox' ? target.checked
 		: raw_value
 	update_state({[k]: value})
 }
 
-const roundish = x => Math.round(x * 10) / 10
+const roundish = (x: number) => Math.round(x * 10) / 10
 
 
-const waiting_stage = { label: 'Waiting for game to start', duration: Infinity }
-const complete_stage = { label: 'Game complete', type: 'complete' }
-const get_current_stage = (offset_ms) => {
-	if (state === 'waiting') return {stage: waiting_stage, offset_ms: 0}
+const waiting_stage: GameStage = { label: 'Waiting for game to start', type: 'waiting', duration: Infinity }
+const complete_stage: GameStage = { label: 'Game complete', type: 'complete', duration: Infinity }
+const get_current_stage = (offset_ms: number): {stage: GameStage, offset_sec: number} => {
+	if (state === 'waiting') return {stage: waiting_stage, offset_sec: 0}
 
 	let offset_sec = Math.round(offset_ms / 1000)
 	for (let s = 0; s < game_stages.length; s++) {
@@ -115,20 +128,20 @@ const get_current_stage = (offset_ms) => {
 	}
 }
 
-let current_stage = null, offset_sec
+let current_stage: GameStage | null = null, offset_sec: number
 $: console.log('current stage', current_stage)
 
 
-const tick = (play_audio) => {
-	// console.log('tick')
+const tick = (play_audio: boolean) => {
+	console.log('tick')
 	// console.log('state', state, 'completed', state && state.complete)
 
 	const time = state === 'playing' ? Date.now() + _clock_offset - game_config.start_time
-		: state === 'paused' ? game_config.paused_progress
+		: state === 'paused' ? game_config.paused_progress!
 		: 0
 	const {stage: new_stage, offset_sec: new_offs} = get_current_stage(time)
 	// state_label = state.label
-	
+
 	offset_sec = new_offs
 	if (new_stage !== current_stage) {
 		console.log('state changed', new_stage.label, new_stage.type === 'complete')
@@ -143,7 +156,7 @@ const tick = (play_audio) => {
 	}
 }
 
-let timer
+let timer: number | null
 $: {
 	// Sadly we can't use internal_state here because it generates a cyclic dependancy.
 	let completed = current_stage ? current_stage.type === 'complete' : false
@@ -167,14 +180,14 @@ $: {
 	}
 }
 
-let game_completed
+let game_completed: boolean
 $: {
 	// console.log('updating game_completed', current_stage)
 	game_completed = (state !== 'playing' || current_stage == null) ? false
 	: (current_stage.type === 'complete')
 }
 
-let internal_state
+let internal_state: GameConfig['state'] | 'completed'
 $: internal_state = game_completed ? 'completed' : state
 
 let bar_width = 0
@@ -183,26 +196,26 @@ $: bar_width = current_stage == null ? 0
 	: current_stage.type === 'complete' ? 100
 	: 100 * offset_sec / current_stage.duration
 
-let stage_label
+let stage_label: string
 $: stage_label = internal_state === 'waiting' ? 'Waiting for game to start'
 	: current_stage == null ? 'unknown' : current_stage.label
 
-const order = ['meditate', 'bead', 'complete']
-const class_for = x => x < 0 ? 'done'
-	: x > 0 ? 'waiting'
-	: 'active'
+// const order = ['meditate', 'bead', 'complete']
+// const class_for = (x: number): string => x < 0 ? 'done'
+// 	: x > 0 ? 'waiting'
+// 	: 'active'
 
-const progress_class = (stage, type, r, p) => {
-	if (stage == null) return ''
+// const progress_class = (stage: GameStage, type: string, r?: number, p?: number): string => {
+// 	if (stage == null) return ''
 
-	const current_o = order.indexOf(stage.type)
-	const element_o = order.indexOf(type)
+// 	const current_o = order.indexOf(stage.type)
+// 	const element_o = order.indexOf(type)
 
-	// const o_diff = element_o - current_o
-	return type === 'bead' && stage.type === 'bead'
-		? (r === stage.r ? class_for(p - stage.p) : class_for(r - stage.r))
-		: class_for(element_o - current_o)
-}
+// 	// const o_diff = element_o - current_o
+// 	return type === 'bead' && stage.type === 'bead'
+// 		? (r === stage.r ? class_for(p - stage.p) : class_for(r - stage.r))
+// 		: class_for(element_o - current_o)
+// }
 
 // This will get more complex in time. For now, pause the game to fiddle.
 $: settings_disabled = state === 'playing'
@@ -287,13 +300,15 @@ body {
 				<h2>Game</h2>
 				{#if game_config.meditate}
 					<div>
-						<span class={progress_class(current_stage, 'meditate')}>Meditation (1 min)</span>
+						<!-- <span class={progress_class(current_stage, 'meditate')}>Meditation (1 min)</span> -->
+						<span>Meditation (1 min)</span>
 					</div>
 				{/if}
 				{#each Array(Math.max(game_config.rounds, 0)) as _, r}
 					<div>Round {r+1}:
 						{#each Array(Math.max(game_config.players, 0)) as _, p}
-							<span class={'bead ' + progress_class(current_stage, 'bead', r, p)}>{p+1} </span>
+							<!-- <span class={'bead ' + progress_class(current_stage, 'bead', r, p)}>{p+1} </span> -->
+							<span>{p+1} </span>
 						{/each}
 					</div>
 				{/each}

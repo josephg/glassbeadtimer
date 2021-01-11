@@ -1,10 +1,11 @@
 import App from './App.svelte';
+import type { GameConfig, State } from './shared';
 
 const path = window.location.pathname.split('/')
 const room = path[path.length - 1]
 console.log('room', room)
 
-let state = {
+let state: State = {
   // room,
   // connection: 'loading',
   game_config: {
@@ -16,7 +17,7 @@ let state = {
     rounds: 0,
     paused_progress: 0,
     seconds_per_bead: -1,
-  },
+  } as GameConfig,
   _active_sessions: -1,
   _magister: null,
   _clock_offset: 0,
@@ -31,26 +32,26 @@ const app = new App({
     ...state
   }
 })
-window.app = app
+;(window as any).app = app
 
-const merge_config = server_patch => {
+const merge_config = (server_patch: any) => {
   for (const k in server_patch) {
     const v = server_patch[k]
-    state.game_config[k] = v
+    ;(state.game_config as any)[k] = v
   }
 }
 
-const merge = server_patch => {
-  console.log('server_patch', server_patch)
-  const local_patch = {}
+const merge = (server_patch: any) => {
+  // console.log('server_patch', server_patch)
+  const local_patch: any = {}
   for (const k in server_patch) {
     const v = server_patch[k]
     if (k === 'game_config') {
       merge_config(v)
       local_patch[k] = state.game_config
-    } else if (state[k] !== v) {
+    } else if (state[k as keyof State] !== v) {
       local_patch[k] = v
-      state[k] = v
+      ;(state as any)[k] = v
     }
   }
   console.log('merge', local_patch)
@@ -63,11 +64,11 @@ const eventsUrl = `${room}`
 ;(async () => {
   // let loaded = false
   while (true) {
-    await new Promise(resolve => {
+    await new Promise<void>(resolve => {
       console.log('connecting...')
       const source = new EventSource(eventsUrl)
       app.$set({connection: 'connecting'})
-      
+
       // source.addEventListener('message', message => {
       source.onopen = () => {
         console.log('OPEN')
