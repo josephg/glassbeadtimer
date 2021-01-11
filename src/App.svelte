@@ -1,15 +1,20 @@
 <script>
 import * as topicIcons from './topics.json'
+
 export let room
+
 export let connection
-export let state // loading, waiting, playing, paused.
-export let start_time
-export let topic
-export let meditate
-export let players
-export let rounds
-export let seconds_per_bead
-export let paused_progress
+
+export let game_config
+// export let state // loading, waiting, playing, paused.
+// export let start_time
+// export let topic
+// export let meditate
+// export let players
+// export let rounds
+// export let seconds_per_bead
+// export let paused_progress
+
 export let _active_sessions
 export let _magister
 export let _clock_offset
@@ -20,6 +25,11 @@ let round_audio
 let complete_audio
 let topic_img
 
+let state
+$: state = game_config.state
+
+$: console.log('Game configuration changed', game_config)
+
 	// export let state
 
 const ARCHETOPICS = [
@@ -29,7 +39,10 @@ const ARCHETOPICS = [
 ]
 
 $: {
-	if (topic_img) topic_img.innerHTML = topicIcons[topic.toLocaleLowerCase()]
+	if (topic_img) {
+		const svgContent = topicIcons[game_config.topic.toLocaleLowerCase()]
+		if (svgContent) topic_img.innerHTML = svgContent
+	}
 }
 
 // Could make configurable. Eh.
@@ -38,27 +51,27 @@ const MEDITATION_SECONDS = 60
 let game_stages = []
 $: {
 	game_stages = [{
-		label: `${meditate ? 'Meditation' : 'Game'} is about to start`,
+		label: `${game_config.meditate ? 'Meditation' : 'Game'} is about to start`,
 		duration: 3,
 		no_sound: true
 	}]
-	if (meditate) game_stages.push({
+	if (game_config.meditate) game_stages.push({
 		label: 'Meditate',
 		type: 'meditate',
 		duration: MEDITATION_SECONDS,
 	})
-	for (let r = 0; r < rounds; r++) {
-		for (let p = 0; p < players; p++) {
+	for (let r = 0; r < game_config.rounds; r++) {
+		for (let p = 0; p < game_config.players; p++) {
 			game_stages.push({
-				label: players > 1 ? `Round ${r+1} player ${p+1}` : `Round ${r+1}`,
-				duration: seconds_per_bead,
+				label: game_config.players > 1 ? `Round ${r+1} player ${p+1}` : `Round ${r+1}`,
+				duration: game_config.seconds_per_bead,
 				type: 'bead', r, p
 			})
 		}
 	}
 }
 
-
+// TODO: The protocol for these update methods doesn't use game_state properly.
 const update_state = async patch => {
 	await fetch(`${room}/configure`, {
 		method: 'POST',
@@ -107,11 +120,11 @@ $: console.log('current stage', current_stage)
 
 
 const tick = (play_audio) => {
-	console.log('tick')
+	// console.log('tick')
 	// console.log('state', state, 'completed', state && state.complete)
 
-	const time = state === 'playing' ? Date.now() + _clock_offset - start_time
-		: state === 'paused' ? paused_progress
+	const time = state === 'playing' ? Date.now() + _clock_offset - game_config.start_time
+		: state === 'paused' ? game_config.paused_progress
 		: 0
 	const {stage: new_stage, offset_sec: new_offs} = get_current_stage(time)
 	// state_label = state.label
@@ -204,7 +217,6 @@ $: if (_magister === true) config_open = true
 // The magister box is fully visible once there's a critical mass of players in the room
 $: magister_opaque = _magister === true || _active_sessions >= 6
 
-
 </script>
 
 <svelte:head>
@@ -215,7 +227,7 @@ body {
 }
 		</style>
 	{/if}
-</svelte:head>	
+</svelte:head>
 
 <!-- <main class:magister={_magister}> -->
 <main>
@@ -228,7 +240,7 @@ body {
 		<!-- <h1>Glass Bead Game Timer</h1> -->
 		<!-- <h1>{topic}</h1> -->
 
-		<div id='topicimg' bind:this={topic_img}></div>
+		<div id='topicimg' bind:this={topic_img}>{game_config.topic}</div>
 
 		<h1>{stage_label}</h1>
 		<div id='progresscontainer'>
@@ -236,17 +248,23 @@ body {
 			<div id='progress' style='width: {bar_width}%'></div>
 		</div>
 
-		{#if (_magister == null || _magister == true) && internal_state == 'waiting'}
-			<button on:click={upd('state', 'playing')}>Start</button>
+		{#if (_magister == null || _magister == true)}
+			{#if internal_state == 'waiting'}
+				<button on:click={upd('state', 'playing')}>Start</button>
+			{:else if internal_state == 'playing'}
+				<button on:click={upd('state', 'paused')}>Pause</button>
+			{:else if internal_state == 'paused'}
+				<button on:click={upd('state', 'playing')}>Resume</button>
+			{/if}
 		{/if}
 
 		<div style='height: 400px;'></div>
 
 		<details>
 			<!-- I'm not ready to delete these UI elements but we might not use them -->
-			<summary>Other stuff</summary>
+			<summary>Info</summary>
 
-			<h1>{topic}</h1>
+			<h1>{game_config.topic}</h1>
 			<h4>Room: <em>{room}</em> <a href="../..">(leave)</a></h4>
 
 			<div>
@@ -267,14 +285,14 @@ body {
 	
 			<div id='rounds'>
 				<h2>Game</h2>
-				{#if meditate}
+				{#if game_config.meditate}
 					<div>
 						<span class={progress_class(current_stage, 'meditate')}>Meditation (1 min)</span>
 					</div>
 				{/if}
-				{#each Array(Math.max(rounds, 0)) as _, r}
+				{#each Array(Math.max(game_config.rounds, 0)) as _, r}
 					<div>Round {r+1}:
-						{#each Array(Math.max(players, 0)) as _, p}
+						{#each Array(Math.max(game_config.players, 0)) as _, p}
 							<span class={'bead ' + progress_class(current_stage, 'bead', r, p)}>{p+1} </span>
 						{/each}
 					</div>
@@ -285,7 +303,7 @@ body {
 
 		{#if _magister == null || _magister == true}
 			<details class='config' bind:open={config_open}>
-				<summary>Advanced controls</summary>
+				<summary>Game controls</summary>
 
 				<p>
 					{#if _magister == null}
@@ -309,7 +327,7 @@ body {
 
 				<label>
 					<span>Topic</span>
-					<input disabled={settings_disabled} type='text' value={topic} on:input={config('topic')} list='archetopics' >
+					<input disabled={settings_disabled} type='text' value={game_config.topic} on:input={config('topic')} list='archetopics' >
 					<datalist id='archetopics'>
 						{#each ARCHETOPICS as topic}
 							<option value={topic}>
@@ -319,22 +337,22 @@ body {
 
 				<label>
 					<span>Pre-game meditation</span>
-					<input disabled={settings_disabled} type='checkbox' checked={meditate} on:input={config('meditate')} >
+					<input disabled={settings_disabled} type='checkbox' checked={game_config.meditate} on:input={config('meditate')} >
 				</label>
 
 				<label>
 					<span>Number of players</span>
-					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={players} on:input={config('players')} min=1 max=12 >
+					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.players} on:input={config('players')} min=1 max=12 >
 				</label>
 
 				<label>
 					<span>Number of rounds</span>
-					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={rounds} on:input={config('rounds')} min=1 max=20>
+					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.rounds} on:input={config('rounds')} min=1 max=20>
 				</label>
 
 				<label>
 					<span>Seconds per bead</span>
-					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={seconds_per_bead} on:input={config('seconds_per_bead')}>
+					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.seconds_per_bead} on:input={config('seconds_per_bead')}>
 				</label>
 
 				<div style='margin-top: 1em;'>
@@ -416,9 +434,9 @@ h1 {
 	text-decoration: line-through;
 	color: #888;
 }
-.waiting {
-	/* color: #888; */
-}
+/* .waiting {
+	color: #888;
+} */
 .active {
 	/* color: magenta; */
 	/* border: 1px solid white; */

@@ -42,14 +42,13 @@ const topic_from_name = name => {
 
 const default_room_data = name => ({
   state: 'waiting',
-  meditate: true,
+  start_time: null,
 
-  // It might make sense to tuck these parameters.
   topic: topic_from_name(name),
+  meditate: true,
   players: 2,
   rounds: 5,
   seconds_per_bead: 60,
-  start_time: null,
   paused_progress: null,
   // _active_sessions: 0,
   // _locked_by: ...
@@ -62,7 +61,7 @@ const get_room = name => {
     r = {
       clients: new Set(), // Set of asyncstreams.
       magister_id: null, // If set, cookie_id of the user who has ownership over the game.
-      value: default_room_data(name)
+      game_config: default_room_data(name),
     }
     rooms.set(name, r)
   }
@@ -77,11 +76,16 @@ const update_room = (name, fn) => {
   let magister_dirty = false
   // let dirty_clients = false
   const txn = {
-    value: r.value,
+    game_config: r.game_config,
 
-    set(k, v) {
+    set_raw(k, v) {
       patch[k] = v
-      r.value[k] = v
+      r[k] = v
+    },
+    set(k, v) {
+      if (patch.game_config == null) patch.game_config = {}
+      patch.game_config[k] = v
+      r.game_config[k] = v
     },
     reset_config() {
       const new_val = default_room_data(name)
@@ -139,7 +143,7 @@ const update_room = (name, fn) => {
         'x-patch-type': 'update-keys'
       },
       data: {
-        ...r.value,
+        game_config: r.game_config,
         _active_sessions: r.clients.size + new_clients.length,
         _magister: r.magister_id == null ? null : c.cookie_id === r.magister_id,
         _server_time: Date.now(),
@@ -227,7 +231,7 @@ const handle_configure = (req, res) => {
   update_room(room, txn => {
     for (const k in parameters) {
       let v = parameters[k]
-      const old_value = txn.value[k]
+      const old_value = txn.game_config[k]
       // console.log('k', k, parameters[k])
       if (k.startsWith('_')) {
         // TODO: Reset
@@ -249,15 +253,15 @@ const handle_configure = (req, res) => {
         if (typeof old_value === 'number' && typeof v === 'string') {
           v = v|0
         }
-        
+
         if (k === 'state') {
           // TODO: Clean this up. Yikes.
           if (v === 'paused') {
             // ms since the game started.
-            txn.set('paused_progress', Date.now() - txn.value.start_time)
+            txn.set('paused_progress', Date.now() - txn.game_config.start_time)
           } else if (v === 'playing') {
-            if (txn.value.paused_progress != null) {
-              txn.set('start_time', Date.now() - txn.value.paused_progress)
+            if (txn.game_config.paused_progress != null) {
+              txn.set('start_time', Date.now() - txn.game_config.paused_progress)
               txn.set('paused_progress', null)
             } else txn.set('start_time', Date.now())
 
@@ -334,7 +338,7 @@ polka()
 
 
 const save = () => {
-  const data = Array.from(rooms).map(([name, room]) => [name, room.value])
+  const data = Array.from(rooms).map(([name, room]) => [name, room.game_config])
   // console.log('data', data)
   fs.writeFileSync(SAVE_FILE, JSON.stringify(data) + '\n')
   console.log('Game saved to', SAVE_FILE)
@@ -344,11 +348,11 @@ const load = () => {
   try {
     const rawData = fs.readFileSync(SAVE_FILE, 'utf8')
     const data = JSON.parse(rawData)
-    for (const [name, value] of data) {
+    for (const [name, game_config] of data) {
       // Gross. We should copy data in using the update_room method.
       // We'll discard any super old rooms.
-      if (value.last_used > Date.now() - (1000 * 60 * 60 * 24 * 7)) {
-        rooms.set(name, {clients: new Set(), magister: null, value})
+      if (game_config.last_used > Date.now() - (1000 * 60 * 60 * 24 * 7)) {
+        rooms.set(name, {clients: new Set(), magister: null, game_config})
       } else {
         console.log('Discarding data for room', name)
       }

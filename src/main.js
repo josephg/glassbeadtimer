@@ -7,14 +7,16 @@ console.log('room', room)
 let state = {
   // room,
   // connection: 'loading',
-  state: 'loading',
-  start_time: 0,
-  meditate: false,
-  topic: '',
-  players: 0,
-  rounds: 0,
-  paused_progress: 0,
-  seconds_per_bead: -1,
+  game_config: {
+    state: 'loading',
+    start_time: 0,
+    meditate: false,
+    topic: '',
+    players: 0,
+    rounds: 0,
+    paused_progress: 0,
+    seconds_per_bead: -1,
+  },
   _active_sessions: -1,
   _magister: null,
   _clock_offset: 0,
@@ -29,17 +31,30 @@ const app = new App({
     ...state
   }
 })
+window.app = app
+
+const merge_config = server_patch => {
+  for (const k in server_patch) {
+    const v = server_patch[k]
+    state.game_config[k] = v
+  }
+}
 
 const merge = server_patch => {
+  console.log('server_patch', server_patch)
   const local_patch = {}
   for (const k in server_patch) {
     const v = server_patch[k]
-    if (state[k] !== v) {
+    if (k === 'game_config') {
+      merge_config(v)
+      local_patch[k] = state.game_config
+    } else if (state[k] !== v) {
       local_patch[k] = v
       state[k] = v
     }
   }
   console.log('merge', local_patch)
+  // console.log('merge', server_patch)
   app.$set(local_patch)
 }
 
@@ -70,7 +85,7 @@ const eventsUrl = `${room}`
             console.warn(`Clock skew detected of ${offset}ms`)
             data._clock_offset = offset
           }
-          
+
           delete data._server_time
         }
         // app.$set(data)
