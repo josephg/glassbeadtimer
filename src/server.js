@@ -329,6 +329,14 @@ polka()
     ? sirv(__dirname + '/../public', {single: 'room.html'})(req, ...args)
     : handle_events(req, ...args)
 })
+.get('/:room', (req, res) => {
+  // Redirect to /rooms/room
+  res.writeHead(302, {
+    'location': `/rooms/${req.params.room}`
+  })
+  res.end()
+  //.redirect(`/rooms/${req.params.room}`)
+})
 // .use('/api', require('./api'))
 
 .listen(PORT, err => {
