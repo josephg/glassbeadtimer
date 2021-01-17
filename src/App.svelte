@@ -56,7 +56,8 @@ interface GameStage {
 	type: 'waiting' | 'bead' | 'meditate' | 'contemplation' | 'complete',
 	duration: number,
 	no_sound?: true,
-	r?: number, p?: number
+	r?: number, p?: number,
+	id?: string
 }
 
 let game_stages: GameStage[] = []
@@ -83,7 +84,8 @@ $: {
 			game_stages.push({
 				label: game_config.players > 1 ? `Round ${r+1} player ${p+1}` : `Round ${r+1}`,
 				duration: game_config.seconds_per_bead,
-				type: 'bead', r, p
+				type: 'bead', r, p,
+				id: `s ${r} ${p}`
 			})
 		}
 	}
@@ -159,18 +161,23 @@ const tick = (play_audio: boolean) => {
 	offset_sec = new_offs
 	if (new_stage !== current_stage) {
 		console.log('state changed', new_stage.label, new_stage.type === 'complete')
+
+		// Hotfix
+		let changed = new_stage == null || current_stage == null || new_stage.id == null || current_stage.id == null || current_stage.id !== new_stage.id
+		console.log(new_stage, current_stage, changed)
+
 		current_stage = new_stage
 		// completed = new_game_state.complete
 		// if (!state.complete) round_audio.play()
 
-		if (play_audio && !new_stage.no_sound) {
+		if (play_audio && !new_stage.no_sound && changed) {
 			if (current_stage.type === 'complete' || current_stage.type === 'contemplation') complete_audio.play()
 			else round_audio.play()
 		}
 	}
 }
 
-let timer: number | null
+let timer: number | null | any // Timeout?
 $: {
 	// Sadly we can't use internal_state here because it generates a cyclic dependancy.
 	let completed = current_stage ? current_stage.type === 'complete' : false
