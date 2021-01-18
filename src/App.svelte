@@ -78,7 +78,8 @@ $: {
 			if (game_config.seconds_between_bead && (r > 0 || p > 0)) game_stages.push({
 				label: 'Breathe',
 				duration: game_config.seconds_between_bead,
-				type: 'bead'
+				type: 'bead',
+				id: `b ${r} ${p}`
 			})
 
 			game_stages.push({
@@ -162,9 +163,11 @@ const tick = (play_audio: boolean) => {
 	if (new_stage !== current_stage) {
 		console.log('state changed', new_stage.label, new_stage.type === 'complete')
 
-		// Hotfix
-		let changed = new_stage == null || current_stage == null || new_stage.id == null || current_stage.id == null || current_stage.id !== new_stage.id
-		console.log(new_stage, current_stage, changed)
+		// This happens sometimes with other kinds of configuration changes -
+		// eg if a user enters or leaves the room, or the room is reconfigured.
+		// Only make a sound if the *stage* changes.
+		let changed = current_stage == null || (new_stage.id ?? new_stage.type) !== (current_stage.id ?? current_stage.type)
+		// console.log(new_stage, current_stage, changed)
 
 		current_stage = new_stage
 		// completed = new_game_state.complete
