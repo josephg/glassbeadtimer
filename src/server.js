@@ -27,6 +27,15 @@ const rand_int = x => Math.floor(Math.random() * x)
 // Map from room name => current room data.
 const rooms = new Map()
 
+const log = (req, ...args) => {
+  const reqIsReq = typeof req === 'object' && typeof req.connection === 'object'
+  console.log(
+    new Date().toISOString(),
+    reqIsReq ? req.connection.remoteAddress : req,
+    ...args
+  )
+}
+
 const topic_from_name = name => {
   // We'll try and find an archetopic contained in the name.
   // name.
@@ -101,11 +110,13 @@ const update_room = (name, fn) => {
       new_clients.push(client)
       patch._active_sessions = r.clients.size + new_clients.length
       // if (r.magister_id === client.cookie_id) update_magister = true
+      log(`Room ${name} added client. Now ${patch._active_sessions} clients`)
     },
     del_client(client) {
       // dirty_clients = true
       r.clients.delete(client)
       patch._active_sessions = r.clients.size + new_clients.length
+      log(`Room ${name} removed client. Now ${patch._active_sessions} clients`)
       if (r.magister_id === client.cookie_id) {
         // Set the magister to be null, but only if the user doesn't have
         // another tab open.
@@ -121,6 +132,7 @@ const update_room = (name, fn) => {
     set_magister(cookie_id) {
       r.magister_id = cookie_id
       magister_dirty = true
+      log(`Room ${name} set magister to ${cookie_id}`)
     }
   }
 
@@ -158,7 +170,7 @@ const update_room = (name, fn) => {
 
 const handle_events = async (req, res) => {
   const {room} = req.params
-  console.log('Got client for room', room);
+  log(req, 'Got client for room', room)
   // console.log(req.headers)
 
   res.writeHead(200, 'OK', {
@@ -187,7 +199,7 @@ const handle_events = async (req, res) => {
   })
 
   res.once('close', () => {
-    console.log('Closed connection to client for room', room)
+    log(req, 'Closed connection to client for room', room)
     connected = false
     update_room(room, txn => {
       txn.set('last_used', Date.now())
@@ -272,7 +284,7 @@ const handle_configure = (req, res) => {
             txn.set('start_time', null)
             txn.set('paused_progress', null)
           }
-          console.log(`Game in room ${room} entered state ${v}`)
+          log(req, `Game in room ${room} entered state ${v}`)
         }
 
         txn.set(k, v)
