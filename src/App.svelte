@@ -308,8 +308,10 @@ body {
 		</div>
 
 		<div id='gameprogress'>
-			{#each inner_game_stages as s, i}
-				<span class={'prog-' + s.type + ' ' + progress_class(i, current_stage_idx)} style='width: {100 * s.duration / inner_game_length}%'></span>
+			{#each game_stages as s, i}
+				{#if s.type === 'bead' || s.type === 'breath'}
+					<span class={'prog-' + s.type + ' ' + progress_class(i, current_stage_idx)} style='width: {100 * s.duration / inner_game_length}%'></span>
+				{/if}
 			{/each}
 		</div>
 
