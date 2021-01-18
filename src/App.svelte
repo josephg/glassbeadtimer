@@ -53,7 +53,7 @@ const MEDITATION_SECONDS = 60
 
 interface GameStage {
 	label: string,
-	type: 'waiting' | 'bead' | 'meditate' | 'contemplation' | 'complete',
+	type: 'waiting' | 'bead' | 'breath' | 'meditate' | 'contemplation' | 'complete',
 	duration: number,
 	no_sound?: true,
 	r?: number, p?: number,
@@ -78,7 +78,7 @@ $: {
 			if (game_config.seconds_between_bead && (r > 0 || p > 0)) game_stages.push({
 				label: 'Breathe',
 				duration: game_config.seconds_between_bead,
-				type: 'bead',
+				type: 'breath',
 				id: `b ${r} ${p}`
 			})
 
@@ -97,8 +97,18 @@ $: {
 		duration: MEDITATION_SECONDS,
 	})
 
+
 	console.log('game stages', game_stages, game_config.seconds_between_bead)
 }
+
+let total_game_length: number
+$: total_game_length = game_stages.reduce((x, s) => x + s.duration, 0)
+
+// Used for the overall game progress indicator.
+let inner_game_stages: GameStage[]
+$: inner_game_stages = game_stages.filter(s => s.type === 'breath' || s.type === 'bead')
+let inner_game_length: number
+$: inner_game_length = inner_game_stages.reduce((x, s) => x + s.duration, 0)
 
 // TODO: The protocol for these update methods doesn't use game_state properly.
 const update_state = async (patch: Record<string, string | number | boolean | null>) => {
@@ -129,25 +139,27 @@ const roundish = (x: number) => Math.round(x * 10) / 10
 
 const waiting_stage: GameStage = { label: 'Waiting for game to start', type: 'waiting', duration: Infinity }
 const complete_stage: GameStage = { label: 'Game complete', type: 'complete', duration: Infinity }
-const get_current_stage = (offset_ms: number): {stage: GameStage, offset_sec: number} => {
-	if (state === 'waiting') return {stage: waiting_stage, offset_sec: 0}
+const get_current_stage = (offset_ms: number): {stage: GameStage, stage_idx: number, offset_sec: number} => {
+	if (state === 'waiting') return {stage: waiting_stage, stage_idx: -1, offset_sec: 0}
 
 	let offset_sec = Math.round(offset_ms / 1000)
 	for (let s = 0; s < game_stages.length; s++) {
 		let stage = game_stages[s]
 		if (stage.duration > offset_sec) {
-			return {stage, offset_sec}
+			return {stage, stage_idx: s, offset_sec}
 		}
 		offset_sec -= stage.duration
 	}
 	return {
-		stage: complete_stage, offset_sec
+		stage: complete_stage, stage_idx: game_stages.length, offset_sec
 	}
 }
 
-let current_stage: GameStage | null = null, offset_sec: number
+// Urgh kinda ugly storing state for both the index and stage itself. Better to
+// have one derive the other.
+let current_stage: GameStage | null = null, current_stage_idx: number = -1, offset_sec: number
 $: console.log('current stage', current_stage)
-
+// $: console.log('idx', current_stage_idx)
 
 const tick = (play_audio: boolean) => {
 	console.log('tick')
@@ -156,7 +168,7 @@ const tick = (play_audio: boolean) => {
 	const time = state === 'playing' ? Date.now() + _clock_offset - game_config.start_time
 		: state === 'paused' ? game_config.paused_progress!
 		: 0
-	const {stage: new_stage, offset_sec: new_offs} = get_current_stage(time)
+	const {stage: new_stage, stage_idx: new_stage_idx, offset_sec: new_offs} = get_current_stage(time)
 	// state_label = state.label
 
 	offset_sec = new_offs
@@ -170,6 +182,7 @@ const tick = (play_audio: boolean) => {
 		// console.log(new_stage, current_stage, changed)
 
 		current_stage = new_stage
+		current_stage_idx = new_stage_idx
 		// completed = new_game_state.complete
 		// if (!state.complete) round_audio.play()
 
@@ -223,6 +236,15 @@ $: bar_width = current_stage == null ? 0
 let stage_label: string
 $: stage_label = internal_state === 'waiting' ? 'Waiting for game to start'
 	: current_stage == null ? 'unknown' : current_stage.label
+
+
+const progress_class = (stage_idx: number, baseline_idx: number): 's-done' | 's-active' | 's-waiting' => {
+	if (current_stage == null || baseline_idx < 0) return 's-waiting'
+
+	return stage_idx < baseline_idx ? 's-done'
+		: stage_idx === baseline_idx ? 's-active'
+		: 's-waiting'
+}
 
 // const order = ['meditate', 'bead', 'complete']
 // const class_for = (x: number): string => x < 0 ? 'done'
@@ -285,6 +307,12 @@ body {
 			<div id='progress' style='width: {bar_width}%'></div>
 		</div>
 
+		<div id='gameprogress'>
+			{#each inner_game_stages as s, i}
+				<span class={'prog-' + s.type + ' ' + progress_class(i, current_stage_idx)} style='width: {100 * s.duration / inner_game_length}%'></span>
+			{/each}
+		</div>
+
 		{#if (_magister == null || _magister == true)}
 			{#if internal_state == 'waiting'}
 				<button on:click={upd('state', 'playing')}>Start</button>
@@ -319,7 +347,7 @@ body {
 					<div>{_active_sessions} players are in this room</div>
 				{/if}
 			{/if}
-	
+
 			<div id='rounds'>
 				<h2>Game</h2>
 				{#if game_config.meditate}
@@ -337,7 +365,7 @@ body {
 					</div>
 				{/each}
 			</div>
-	
+
 		</details>
 
 		{#if _magister == null || _magister == true}
@@ -451,9 +479,10 @@ h1 {
 #progresscontainer {
 	/* width: calc(100% - 50px); */
 	position: relative;
-	margin: 25px;
+	margin: 10px 25px;
 	height: 5em;
 	border: 2px solid var(--fg-color);
+	/* margin-bottom: 0; */
 }
 
 #progress_time {
@@ -472,6 +501,44 @@ h1 {
 	/* width: 50%; */
 	height: 100%;
 	/* transition: width 1s linear; */
+}
+
+#gameprogress {
+	/* width: 300px; */
+	margin: 25px;
+	height: 15px;
+	/* background-color: blue; */
+	margin-top: 0;
+}
+
+#gameprogress > span {
+	display: inline-block;
+	/* height: 10px; */
+	background-color: var(--fg-color);
+	/* border-left: 1px solid var(--bg-color);
+	border-right: 1px solid var(--bg-color); */
+}
+
+/* .prog-waiting {
+	height: 100%;
+} */
+/* .prog-meditate, .prog-contemplation {
+	height: 50%;
+} */
+.prog-bead {
+	height: 100%;
+}
+/* .prog-breath {
+} */
+
+.s-done {
+	opacity: 20%;
+}
+/* .s-active {
+
+} */
+.s-waiting {
+	opacity: 50%;
 }
 
 
