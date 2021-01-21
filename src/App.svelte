@@ -83,7 +83,8 @@ $: {
 			})
 
 			game_stages.push({
-				label: game_config.players > 1 ? `Round ${r+1} player ${p+1}` : `Round ${r+1}`,
+				label: '',
+				// label: game_config.players > 1 ? `Round ${r+1} player ${p+1}` : `Round ${r+1}`,
 				duration: game_config.seconds_per_bead,
 				type: 'bead', r, p,
 				id: `s ${r} ${p}`
@@ -301,7 +302,7 @@ body {
 
 		<div id='topicimg' bind:this={topic_img}>{game_config.topic}</div>
 
-		<h1>{stage_label}</h1>
+		<h1 id='stagelabel'>{stage_label}</h1>
 		<div id='progresscontainer'>
 			<div id='progress_time'>{((internal_state === 'playing' || internal_state === 'paused') && current_stage) ? current_stage.duration - offset_sec : ''}</div>
 			<div id='progress' style='width: {bar_width}%'></div>
@@ -476,6 +477,10 @@ main {
 
 h1 {
 	margin-top: 1em;
+}
+
+#stagelabel {
+	height: 1.5em;
 }
 
 #progresscontainer {
