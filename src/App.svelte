@@ -52,6 +52,7 @@ const ARCHETOPICS = [
 ]
 
 
+
 let audio_works = true
 
 function test_audio() {
@@ -82,12 +83,13 @@ function test_audio() {
 	)
 }
 function fix_audio() {
-
 	console.log('fixxx')
 	test_audio()
 }
 setTimeout(test_audio, 0)
-
+document.onclick = () => {
+	if (!audio_works) test_audio()
+}
 
 const fixed_rand = Math.random()
 const randInt = (n: number) => Math.floor(fixed_rand * n)
