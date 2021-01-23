@@ -2,7 +2,8 @@
 import type { HtmlTag } from 'svelte/internal';
 import type { GameConfig } from './shared';
 
-import * as topicIcons from './topics.json'
+import * as topicIcons from './topicicons.json'
+import topicSpecial from './topicspecial'
 
 export let room: string
 
@@ -27,6 +28,15 @@ export let _clock_offset: number
 let round_audio: HTMLAudioElement
 let complete_audio: HTMLAudioElement
 let topic_img: HTMLElement
+let topic_text: HTMLElement
+
+round_audio = new Audio()
+round_audio.src = "/lo-metal-tone.mp3"
+complete_audio = new Audio()
+complete_audio.src = "/hi-metal-tone.mp3"
+// round_audio.preload = 'auto'
+	// <audio bind:this={complete_audio} src="/hi-metal-tone.mp3" preload="auto"><track kind="captions"></audio>
+
 
 let state: GameConfig['state']
 $: state = game_config.state
@@ -41,10 +51,64 @@ const ARCHETOPICS = [
   'History', 'Cosmos', 'Time', 'Life', 'Addiction', 'Paradox', 'Shadow', 'Society'
 ]
 
+
+let audio_works = true
+
+function test_audio() {
+	// This ugly monstrosity brought to you by iOS Safari. 
+	// This seems to be the only way to bless the audio
+	// objects to be able to play during the game. :/
+	
+	// let a = new Audio()
+	// a.volume = 0.1
+	const round_src = round_audio.src
+	const complete_src = complete_audio.src
+	round_audio.src = complete_audio.src = '/silence.mp3'
+	// a.play().then(
+	complete_audio.play()
+	round_audio.play().then(
+		() => {
+			audio_works = true
+			round_audio.src = round_src
+			complete_audio.src = complete_src
+			console.log('Audio works')
+		},
+		() => {
+			audio_works = false
+			round_audio.src = round_src
+			complete_audio.src = complete_src
+			console.log('Audio does not work')
+		}
+	)
+}
+function fix_audio() {
+
+	console.log('fixxx')
+	test_audio()
+}
+setTimeout(test_audio, 0)
+
+
+const fixed_rand = Math.random()
+const randInt = (n: number) => Math.floor(fixed_rand * n)
+function randItem<T>(arr: T[]) {return arr[randInt(arr.length)] }
+
 $: {
-	if (topic_img) {
-		const svgContent = topicIcons[game_config.topic.toLocaleLowerCase() as keyof typeof topicIcons]
-		if (svgContent) topic_img.innerHTML = svgContent
+	if (topic_img && topic_text) {
+		const topic = game_config.topic.toLocaleLowerCase()
+		const svgContent = topicIcons[topic as keyof typeof topicIcons]
+		const textContent = topicSpecial[topic as keyof typeof topicSpecial]
+
+		if (svgContent) {
+			topic_img.innerHTML = svgContent
+			topic_text.innerText = ''
+		} else if (textContent) {
+			topic_img.innerHTML = ''
+			topic_text.innerText = randItem(textContent)
+		} else {
+			topic_img.innerHTML = ''
+			topic_text.innerText = game_config.topic
+		}
 	}
 }
 
@@ -63,7 +127,7 @@ interface GameStage {
 let game_stages: GameStage[] = []
 $: {
 	game_stages = [{
-		label: `${game_config.meditate ? 'Meditation' : 'Game'} is about to start`,
+		label: `${game_config.meditate ? 'Meditation' : 'Game'} starting...`,
 		type: 'waiting',
 		duration: 3,
 		no_sound: true
@@ -138,7 +202,7 @@ const config = (k: string): svelte.JSX.FormEventHandler<HTMLInputElement> => (e)
 const roundish = (x: number) => Math.round(x * 10) / 10
 
 
-const waiting_stage: GameStage = { label: 'Waiting for game to start', type: 'waiting', duration: Infinity }
+const waiting_stage: GameStage = { label: 'Waiting to start', type: 'waiting', duration: Infinity }
 const complete_stage: GameStage = { label: 'Game complete', type: 'complete', duration: Infinity }
 const get_current_stage = (offset_ms: number): {stage: GameStage, stage_idx: number, offset_sec: number} => {
 	if (state === 'waiting') return {stage: waiting_stage, stage_idx: -1, offset_sec: 0}
@@ -235,7 +299,7 @@ $: bar_width = current_stage == null ? 0
 	: 100 * offset_sec / current_stage.duration
 
 let stage_label: string
-$: stage_label = internal_state === 'waiting' ? 'Waiting for game to start'
+$: stage_label = internal_state === 'waiting' ? 'Waiting to start'
 	: current_stage == null ? 'unknown' : current_stage.label
 
 
@@ -246,23 +310,6 @@ const progress_class = (stage_idx: number, baseline_idx: number): 's-done' | 's-
 		: stage_idx === baseline_idx ? 's-active'
 		: 's-waiting'
 }
-
-// const order = ['meditate', 'bead', 'complete']
-// const class_for = (x: number): string => x < 0 ? 'done'
-// 	: x > 0 ? 'waiting'
-// 	: 'active'
-
-// const progress_class = (stage: GameStage, type: string, r?: number, p?: number): string => {
-// 	if (stage == null) return ''
-
-// 	const current_o = order.indexOf(stage.type)
-// 	const element_o = order.indexOf(type)
-
-// 	// const o_diff = element_o - current_o
-// 	return type === 'bead' && stage.type === 'bead'
-// 		? (r === stage.r ? class_for(p - stage.p) : class_for(r - stage.r))
-// 		: class_for(element_o - current_o)
-// }
 
 // This will get more complex in time. For now, pause the game to fiddle.
 $: settings_disabled = state === 'playing'
@@ -291,8 +338,12 @@ body {
 
 <!-- <main class:magister={_magister}> -->
 <main>
-	<audio bind:this={round_audio} src="/lo-metal-tone.mp3" preload="auto"><track kind="captions"></audio>
-	<audio bind:this={complete_audio} src="/hi-metal-tone.mp3" preload="auto"><track kind="captions"></audio>
+	<!-- <audio bind:this={round_audio} src="/lo-metal-tone.mp3" preload="auto" autoplay><track kind="captions"></audio>
+	<audio bind:this={complete_audio} src="/hi-metal-tone.mp3" preload="auto"><track kind="captions"></audio> -->
+
+	{#if !audio_works}
+		<button id='fixaudio' on:click={fix_audio}>Audio muted. Click to unmute</button>
+	{/if}
 
 	{#if internal_state === 'loading'}
 		<h1>Loading game state</h1>
@@ -300,7 +351,10 @@ body {
 		<!-- <h1>Glass Bead Game Timer</h1> -->
 		<!-- <h1>{topic}</h1> -->
 
-		<div id='topicimg' bind:this={topic_img}>{game_config.topic}</div>
+		<div id='topic'>
+			<div id='topicimg' bind:this={topic_img}></div>
+			<div id='topictext' bind:this={topic_text}></div>
+		</div>
 
 		<h1 id='stagelabel'>{stage_label}</h1>
 		<div id='progresscontainer'>
@@ -350,25 +404,6 @@ body {
 					<div>{_active_sessions} players are in this room</div>
 				{/if}
 			{/if}
-
-			<div id='rounds'>
-				<h2>Game</h2>
-				{#if game_config.meditate}
-					<div>
-						<!-- <span class={progress_class(current_stage, 'meditate')}>Meditation (1 min)</span> -->
-						<span>Meditation (1 min)</span>
-					</div>
-				{/if}
-				{#each Array(Math.max(game_config.rounds, 0)) as _, r}
-					<div>Round {r+1}:
-						{#each Array(Math.max(game_config.players, 0)) as _, p}
-							<!-- <span class={'bead ' + progress_class(current_stage, 'bead', r, p)}>{p+1} </span> -->
-							<span>{p+1} </span>
-						{/each}
-					</div>
-				{/each}
-			</div>
-
 		</details>
 
 		{#if _magister == null || _magister == true}
@@ -466,21 +501,39 @@ main {
 	text-align: center;
 }
 
+#fixaudio {
+	z-index: 1;
+	color: var(--fg-color);
+	background-color: var(--bg-highlight);
+	position: absolute;
+	bottom: 2px;
+	width: 300px;
+	padding: 0.5em 1em;
+	left: 50%;
+	transform: translateX(-50%);
+	font-size: 130%;
+}
+
 #topicimg {
 	width: 300px;
 	display: inline-block;
+}
+#topictext:not(:empty) {
+	padding: 3em 0 2em 0;
+	font-size: 130%;
+	font-style: italic;
 }
 
 /* .magister {
 	background-color: var(--bg-highlight);
 } */
 
-h1 {
+/* h1 {
 	margin-top: 1em;
-}
+} */
 
-#stagelabel {
-	height: 1.5em;
+#stagelabel:empty {
+	height: 1.2em;
 }
 
 #progresscontainer {
@@ -548,22 +601,6 @@ h1 {
 	opacity: 50%;
 }
 
-
-/* .bead {
-	margin-right: 1em;
-	padding: 2px 4px;
-}
-.done {
-	text-decoration: line-through;
-	color: #888;
-} */
-/* .waiting {
-	color: #888;
-} */
-/* .active {
-	background-color: var(--fg-color);
-	color: var(--bg-color);
-} */
 
 /***** Game config *****/
 .config {

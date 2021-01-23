@@ -24,5 +24,5 @@ const out = {}
   }
   console.log(JSON.stringify(out, null, 2))
 
-  fs.writeFileSync('src/topics.json', JSON.stringify(out, null, 2))
+  fs.writeFileSync('src/topicicons.json', JSON.stringify(out, null, 2))
 })()
