@@ -31,7 +31,7 @@ const log = (req, ...args) => {
   const reqIsReq = typeof req === 'object' && typeof req.connection === 'object'
   console.log(
     new Date().toISOString(),
-    reqIsReq ? req.connection.remoteAddress : req,
+    reqIsReq ? (req.headers['x-forwarded-for'] || req.connection.remoteAddress) : req,
     ...args
   )
 }
