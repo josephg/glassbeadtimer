@@ -25,18 +25,64 @@ export let _clock_offset: number
 
 // let game_completed = false // Derived from other properties
 
-let round_audio: HTMLAudioElement
-let complete_audio: HTMLAudioElement
+let audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+
+interface SoundFile {
+	buf: AudioBuffer | null, // null while loading.
+	loaded: Promise<void>
+}
+const playSound = (sound: SoundFile) => {
+	if (sound.buf != null && audioCtx.state === 'running') { // Do nothing while audio is loading.
+		const source = audioCtx.createBufferSource()
+		source.buffer = sound.buf
+		source.connect(audioCtx.destination)
+		source.start(0)
+	}
+}
+
+const loadSound = (path: string): SoundFile => {
+	let sound: Partial<SoundFile> = { buf: null }
+	sound.loaded = (async () => {
+		const resp = await fetch(path)
+		const buf = await resp.arrayBuffer()
+		sound.buf = await new Promise((resolve, reject) => {
+			// Safari doesn't support the promise variant of decodeAudioData
+			// https://caniuse.com/mdn-api_baseaudiocontext_decodeaudiodata_promise_syntax
+			audioCtx.decodeAudioData(buf, resolve, reject)
+		})
+	})()
+	return sound as SoundFile
+}
+
 let topic_img: HTMLElement
 let topic_text: HTMLElement
 
-round_audio = new Audio()
-round_audio.src = "/lo-metal-tone.mp3"
-complete_audio = new Audio()
-complete_audio.src = "/hi-metal-tone.mp3"
-// round_audio.preload = 'auto'
-	// <audio bind:this={complete_audio} src="/hi-metal-tone.mp3" preload="auto"><track kind="captions"></audio>
+const round_audio = loadSound('/lo-metal-tone.mp3')
+const complete_audio = loadSound('/hi-metal-tone.mp3')
 
+
+let audio_works = audioCtx.state === 'running'
+if (audioCtx.state === 'suspended') {
+	console.log('Audio suspended!')
+	audioCtx.resume().then(() => {
+		console.log('audio unsuspended!!')
+		audio_works = true
+	})
+}
+
+async function fix_audio() {
+	// This hack brought to you by iOS. We need to send some sound to the audio
+	// context from an input event handler to enable it.
+	const source = audioCtx.createOscillator()
+
+	const gain = audioCtx.createGain()
+	gain.gain.setValueAtTime(0, 0)
+	gain.connect(audioCtx.destination)
+
+	source.connect(gain)
+	source.start(0)
+	source.stop(0)
+}
 
 let state: GameConfig['state']
 $: state = game_config.state
@@ -52,44 +98,6 @@ const ARCHETOPICS = [
 ]
 
 
-
-let audio_works = true
-
-function test_audio() {
-	// This ugly monstrosity brought to you by iOS Safari. 
-	// This seems to be the only way to bless the audio
-	// objects to be able to play during the game. :/
-	
-	// let a = new Audio()
-	// a.volume = 0.1
-	const round_src = round_audio.src
-	const complete_src = complete_audio.src
-	round_audio.src = complete_audio.src = '/silence.mp3'
-	// a.play().then(
-	complete_audio.play()
-	round_audio.play().then(
-		() => {
-			audio_works = true
-			round_audio.src = round_src
-			complete_audio.src = complete_src
-			console.log('Audio works')
-		},
-		() => {
-			audio_works = false
-			round_audio.src = round_src
-			complete_audio.src = complete_src
-			console.log('Audio does not work')
-		}
-	)
-}
-function fix_audio() {
-	console.log('fixxx')
-	test_audio()
-}
-setTimeout(test_audio, 0)
-document.onclick = () => {
-	if (!audio_works) test_audio()
-}
 
 const fixed_rand = Math.random()
 const randInt = (n: number) => Math.floor(fixed_rand * n)
@@ -254,8 +262,11 @@ const tick = (play_audio: boolean) => {
 		// if (!state.complete) round_audio.play()
 
 		if (play_audio && !new_stage.no_sound && changed) {
-			if (current_stage.type === 'complete' || current_stage.type === 'contemplation') complete_audio.play()
-			else round_audio.play()
+			const sound = (current_stage.type === 'complete' || current_stage.type === 'contemplation')
+			? complete_audio
+			: round_audio
+
+			playSound(sound)
 		}
 	}
 }
