@@ -1,6 +1,7 @@
 <script lang="ts">
 import type { HtmlTag } from 'svelte/internal';
 import type { GameConfig } from './shared';
+import unmuteAudio from 'unmute-ios-audio'
 
 import * as topicIcons from './topicicons.json'
 import topicSpecial from './topicspecial'
@@ -25,7 +26,10 @@ export let _clock_offset: number
 
 // let game_completed = false // Derived from other properties
 
-let audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+// This module shouldn't be needed, but somehow it manages to make audio work
+// even when an iphone is muted.
+unmuteAudio()
+const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
 
 interface SoundFile {
 	buf: AudioBuffer | null, // null while loading.
@@ -81,7 +85,7 @@ async function fix_audio() {
 
 	source.connect(gain)
 	source.start(0)
-	source.stop(0)
+	source.stop(1)
 }
 
 let state: GameConfig['state']
