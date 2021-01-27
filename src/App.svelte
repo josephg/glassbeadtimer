@@ -623,7 +623,7 @@ main {
 .config {
 	margin-top: 2em;
 	/* iOS eats margin at the bottom of the page for some reason */
-	padding-bottom: 2em;
+	padding-bottom: 4em;
 }
 
 summary {
