@@ -86,7 +86,7 @@ async function fix_audio() {
 
 	source.connect(gain)
 	source.start(0)
-	source.stop(1)
+	source.stop(0)
 }
 
 let state: GameConfig['state']
