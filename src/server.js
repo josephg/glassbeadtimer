@@ -105,6 +105,10 @@ const update_room = (name, fn) => {
         this.set(k, new_val[k])
       }
     },
+    set_source_id(id) {
+      // id of client so that browser can ignore their own messages.
+      patch._id = id
+    },
     add_client(client) {
       // dirty_clients = true
       new_clients.push(client)
@@ -257,6 +261,9 @@ const handle_configure = (req, res) => {
           case '_magister': // Magister Ludi
             // console.log('setting magister', req.cookie_id)
             txn.set_magister(v ? req.cookie_id : null)
+            break;
+          case '_id':
+            txn.set_source_id(v)
             break;
           default:
             console.warn('Ignoring action', k)

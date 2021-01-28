@@ -20,5 +20,6 @@ export interface State {
 	game_config: GameConfig,
 	_active_sessions: number,
 	_magister: null | true,
-	_clock_offset: number
+	_clock_offset: number,
+	_self_id: string,
 }

@@ -20,6 +20,7 @@ export let game_config: GameConfig
 // export let seconds_per_bead
 // export let paused_progress
 
+export let _self_id: string
 export let _active_sessions: number
 export let _magister: true | null
 export let _clock_offset: number
@@ -189,8 +190,10 @@ $: inner_game_stages = game_stages.filter(s => s.type === 'breath' || s.type ===
 let inner_game_length: number
 $: inner_game_length = inner_game_stages.reduce((x, s) => x + s.duration, 0)
 
+
 // TODO: The protocol for these update methods doesn't use game_state properly.
 const update_state = async (patch: Record<string, string | number | boolean | null>) => {
+	patch._id = _self_id
 	await fetch(`${room}/configure`, {
 		method: 'POST',
 		mode: 'same-origin',
@@ -451,7 +454,7 @@ body {
 
 					<label>
 						<span>Topic</span>
-						<input disabled={settings_disabled} type='text' value={game_config.topic} on:input={config('topic')} list='archetopics' >
+						<input disabled={settings_disabled} type='text' bind:value={game_config.topic} on:input={config('topic')} list='archetopics' >
 						<datalist id='archetopics'>
 							{#each ARCHETOPICS as topic}
 								<option value={topic}>
@@ -471,22 +474,22 @@ body {
 
 					<label>
 						<span>Number of players</span>
-						<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.players} on:input={config('players')} min=1 max=12 >
+						<input disabled={settings_disabled} type='number' pattern='[0-9]*' bind:value={game_config.players} on:input={config('players')} min=1 max=12 >
 					</label>
 
 					<label>
 						<span>Number of rounds</span>
-						<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.rounds} on:input={config('rounds')} min=1 max=20>
+						<input disabled={settings_disabled} type='number' pattern='[0-9]*' bind:value={game_config.rounds} on:input={config('rounds')} min=1 max=20>
 					</label>
 
 					<label>
 						<span>Seconds per bead</span>
-						<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.seconds_per_bead} on:input={config('seconds_per_bead')}>
+						<input disabled={settings_disabled} type='number' pattern='[0-9]*' bind:value={game_config.seconds_per_bead} on:input={config('seconds_per_bead')}>
 					</label>
 
 					<label>
 						<span>Seconds between beads</span>
-						<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.seconds_between_bead} on:input={config('seconds_between_bead')}>
+						<input disabled={settings_disabled} type='number' pattern='[0-9]*' bind:value={game_config.seconds_between_bead} on:input={config('seconds_between_bead')}>
 					</label>
 
 					<div style='margin-top: 1em;'>
@@ -689,6 +692,10 @@ input {
 	font-size: 16px;
 	/* color: var(--bg-color); */
 	border: 2px solid #686868;
+}
+
+input[disabled] {
+	color: #2d2d2d;
 }
 
 input[type=checkbox] {
