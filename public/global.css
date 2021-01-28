@@ -52,14 +52,15 @@ a {
 }
 
 body {
-	background-color: var(--bg-color);
+  background-color: var(--bg-color);
   color: var(--fg-color);
-  
+
   /* margin-top: 1em;
   margin-bottom: 3em; */
 
-	/* padding: 1em; */
-	padding: 1em 3em;
-	line-height: 1.4;
+  /* padding: 1em; */
+  padding: 1em 0;
+  margin: 0;
+  line-height: 1.4;
 }
 

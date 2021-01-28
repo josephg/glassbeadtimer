@@ -359,7 +359,7 @@ body {
 	<audio bind:this={complete_audio} src="/hi-metal-tone.mp3" preload="auto"><track kind="captions"></audio> -->
 
 	{#if !audio_works}
-		<button id='fixaudio' on:click={fix_audio}>Audio muted. Click to unmute</button>
+		<button id='fixaudio' on:click={fix_audio}>Click to unmute audio</button>
 	{/if}
 
 	{#if internal_state === 'loading'}
@@ -388,6 +388,11 @@ body {
 		</div>
 
 		{#if (_magister == null || _magister == true)}
+
+			{#if config_open && (internal_state == 'paused' || internal_state == 'completed') }
+				<button on:click={upd('state', 'waiting')} style='margin-right: 1em;'>Restart game</button>
+			{/if}
+
 			{#if internal_state == 'waiting'}
 				<button on:click={upd('state', 'playing')}>Start</button>
 			{:else if internal_state == 'playing'}
@@ -395,11 +400,10 @@ body {
 			{:else if internal_state == 'paused'}
 				<button on:click={upd('state', 'playing')}>Resume</button>
 			{/if}
+
 		{/if}
 
-		<div style='height: 400px;'></div>
-
-		<details>
+		<details style='display: none;'>
 			<!-- I'm not ready to delete these UI elements but we might not use them -->
 			<summary>Info</summary>
 
@@ -424,87 +428,95 @@ body {
 		</details>
 
 		{#if _magister == null || _magister == true}
-			<details class='config' bind:open={config_open}>
-				<summary>Game controls</summary>
+			{#if config_open}
+				<div class='config'>
+					<!-- <summary>Game controls</summary> -->
 
-				<p>
-					{#if _magister == null}
-						This will effect all players. Will you borrow power? Will you steal it?
-					{:else}
-						You are master of the games. These controls are yours alone.
-					{/if}
-				</p>
+					<p>
+						{#if _magister == null}
+							<!-- This will effect all players. Will you borrow power? Will you steal it? -->
+						{:else}
+							You are master of the games. These controls are yours alone.
+						{/if}
+					</p>
 
-				{#if internal_state == 'waiting'}
-					<button on:click={upd('state', 'playing')}>Start</button>
-				{:else if internal_state == 'playing'}
-					<button on:click={upd('state', 'paused')}>Pause</button>
-				{:else if internal_state == 'paused'}
-					<button on:click={upd('state', 'playing')}>Resume</button>
-				{/if}
+					<!-- {#if internal_state == 'waiting'}
+						<button on:click={upd('state', 'playing')}>Start</button>
+					{:else if internal_state == 'playing'}
+						<button on:click={upd('state', 'paused')}>Pause</button>
+					{:else if internal_state == 'paused'}
+						<button on:click={upd('state', 'playing')}>Resume</button>
+					{/if} -->
 
-				{#if internal_state == 'paused' || internal_state == 'completed' }
-					<button on:click={upd('state', 'waiting')}>Restart game</button>
-				{/if}
 
-				<label>
-					<span>Topic</span>
-					<input disabled={settings_disabled} type='text' value={game_config.topic} on:input={config('topic')} list='archetopics' >
-					<datalist id='archetopics'>
-						{#each ARCHETOPICS as topic}
-							<option value={topic}>
-						{/each}
-					</datalist>
-				</label>
+					<label>
+						<span>Topic</span>
+						<input disabled={settings_disabled} type='text' value={game_config.topic} on:input={config('topic')} list='archetopics' >
+						<datalist id='archetopics'>
+							{#each ARCHETOPICS as topic}
+								<option value={topic}>
+							{/each}
+						</datalist>
+					</label>
 
-				<label>
-					<span>Pre-game meditation</span>
-					<input disabled={settings_disabled} type='checkbox' checked={game_config.meditate} on:input={config('meditate')} >
-				</label>
+					<label>
+						<span>Pre-game meditation</span>
+						<input disabled={settings_disabled} type='checkbox' checked={game_config.meditate} on:input={config('meditate')} >
+					</label>
 
-				<label>
-					<span>Post game contemplation</span>
-					<input disabled={settings_disabled} type='checkbox' checked={game_config.contemplation} on:input={config('contemplation')} >
-				</label>
+					<label>
+						<span>Post game contemplation</span>
+						<input disabled={settings_disabled} type='checkbox' checked={game_config.contemplation} on:input={config('contemplation')} >
+					</label>
 
-				<label>
-					<span>Number of players</span>
-					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.players} on:input={config('players')} min=1 max=12 >
-				</label>
+					<label>
+						<span>Number of players</span>
+						<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.players} on:input={config('players')} min=1 max=12 >
+					</label>
 
-				<label>
-					<span>Number of rounds</span>
-					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.rounds} on:input={config('rounds')} min=1 max=20>
-				</label>
+					<label>
+						<span>Number of rounds</span>
+						<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.rounds} on:input={config('rounds')} min=1 max=20>
+					</label>
 
-				<label>
-					<span>Seconds per bead</span>
-					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.seconds_per_bead} on:input={config('seconds_per_bead')}>
-				</label>
+					<label>
+						<span>Seconds per bead</span>
+						<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.seconds_per_bead} on:input={config('seconds_per_bead')}>
+					</label>
 
-				<label>
-					<span>Seconds between beads</span>
-					<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.seconds_between_bead} on:input={config('seconds_between_bead')}>
-				</label>
+					<label>
+						<span>Seconds between beads</span>
+						<input disabled={settings_disabled} type='number' pattern='[0-9]*' value={game_config.seconds_between_bead} on:input={config('seconds_between_bead')}>
+					</label>
 
-				<div style='margin-top: 1em;'>
-					(Total game length: {roundish(
-						game_stages.reduce((x, s) => x + s.duration, 0) / 60
-					)} minutes)
+					<div style='margin-top: 1em;'>
+						(Total game length: {roundish(
+							game_stages.reduce((x, s) => x + s.duration, 0) / 60
+						)} minutes)
+					</div>
+
+					<div id='magister_box' class:magister_opaque>
+						{#if _magister == null}
+							<button on:click={upd('_magister', true)}>Assume the mantle of Magister Ludi</button>
+							<p><i>for large games</i></p>
+							<p>When present, the Magister Ludi (master of the games) has exclusive control of the game.</p>
+						{:else if _magister == true}
+							<button on:click={upd('_magister', null)}>Abdicate Magister Ludi status</button>
+							<p>You are the master of the games. You have exclusive control over playing, pausing and configuring this game.</p>
+							<p>Do not close this browser window or you will be dethroned.</p>
+						{/if}
+					</div>
 				</div>
+			{/if}
+			<button id='configtoggle' class:config_open on:click={() => {config_open = !config_open}}>
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="7 7 10 10">
+					<path d="M 11.064453 7 C 10.935453 7 10.8275 7.0966094 10.8125 7.2246094 L 10.695312 8.2363281 C 10.211311 8.4043017 9.7738964 8.6598036 9.3945312 8.9882812 L 8.4570312 8.5839844 C 8.3390312 8.5329844 8.2026719 8.5774531 8.1386719 8.6894531 L 7.2011719 10.310547 C 7.1361719 10.421547 7.1665313 10.563625 7.2695312 10.640625 L 8.078125 11.240234 C 8.0307023 11.48651 8 11.739891 8 12 C 8 12.260109 8.0307023 12.51349 8.078125 12.759766 L 7.2695312 13.359375 C 7.1665313 13.435375 7.1371719 13.577453 7.2011719 13.689453 L 8.1386719 15.310547 C 8.2026719 15.422547 8.3390312 15.468969 8.4570312 15.417969 L 9.3945312 15.011719 C 9.7738964 15.340196 10.211311 15.595698 10.695312 15.763672 L 10.8125 16.775391 C 10.8275 16.903391 10.935453 17 11.064453 17 L 12.935547 17 C 13.064547 17 13.1725 16.903391 13.1875 16.775391 L 13.304688 15.763672 C 13.789173 15.59553 14.227802 15.340666 14.607422 15.011719 L 15.542969 15.414062 C 15.660969 15.465063 15.797328 15.420594 15.861328 15.308594 L 16.798828 13.6875 C 16.863828 13.5765 16.833469 13.434422 16.730469 13.357422 L 15.923828 12.757812 C 15.970992 12.512182 16 12.25938 16 12 C 16 11.739891 15.969298 11.48651 15.921875 11.240234 L 16.730469 10.640625 C 16.833469 10.564625 16.862828 10.422547 16.798828 10.310547 L 15.861328 8.6894531 C 15.797328 8.5774531 15.660969 8.5310312 15.542969 8.5820312 L 14.605469 8.9882812 C 14.226104 8.6598036 13.788689 8.4043017 13.304688 8.2363281 L 13.1875 7.2246094 C 13.1725 7.0966094 13.064547 7 12.935547 7 L 11.064453 7 z M 12 10 C 13.105 10 14 10.895 14 12 C 14 13.105 13.105 14 12 14 C 10.895 14 10 13.105 10 12 C 10 10.895 10.895 10 12 10 z">
+					</path>
+				</svg>
+			</button>
 
-				<div id='magister_box' class:magister_opaque>
-					{#if _magister == null}
-						<button on:click={upd('_magister', true)}>Assume the mantle of Magister Ludi</button>
-						<p><i>Advanced - for large games</i></p>
-						<p>When present, the Magister Ludi (master of the games) has exclusive control of the game.</p>
-					{:else if _magister == true}
-						<button on:click={upd('_magister', null)}>Abdicate Magister Ludi status</button>
-						<p>You are the master of the games. You have exclusive control over playing, pausing and configuring this game.</p>
-						<p>Do not close this browser window or you will be dethroned.</p>
-					{/if}
-				</div>
-			</details>
+			<!-- iOS eats margin at the bottom of the page for some reason -->
+			<div style='padding-bottom: 4em;'></div>
 		{:else}
 			<p class='config'>Magister Ludi is managing this game.</p>
 		{/if}
@@ -523,7 +535,7 @@ main {
 	color: var(--fg-color);
 	background-color: var(--bg-highlight);
 	position: absolute;
-	bottom: 2px;
+	top: 2px;
 	width: 300px;
 	padding: 0.5em 1em;
 	left: 50%;
@@ -556,7 +568,7 @@ main {
 #progresscontainer {
 	/* width: calc(100% - 50px); */
 	position: relative;
-	margin: 10px 25px;
+	margin: 10px 2em;
 	height: 5em;
 	border: 2px solid var(--fg-color);
 	/* margin-bottom: 0; */
@@ -582,7 +594,7 @@ main {
 
 #gameprogress {
 	/* width: 300px; */
-	margin: 25px;
+	margin: 25px 2em; /* Sides same as #processcontainer. Bit of a hack. */
 	height: 15px;
 	/* background-color: blue; */
 	margin-top: 0;
@@ -620,10 +632,32 @@ main {
 
 
 /***** Game config *****/
+
+#configtoggle {
+	/* color: var(--fg-color); */
+	background-color: transparent;
+	border: none;
+	z-index: 2;
+}
+#configtoggle > svg {
+	fill: #7b6565;
+	width: 40px;
+	height: 40px;
+}
+
+#configtoggle:not(.config_open) {
+	position: fixed;
+	right: 1em;
+	bottom: 1em;
+}
+
+#configtoggle.config_open {
+	position: absolute;
+	right: 1em;
+}
+
 .config {
 	margin-top: 2em;
-	/* iOS eats margin at the bottom of the page for some reason */
-	padding-bottom: 2em;
 }
 
 summary {
@@ -638,9 +672,9 @@ button {
 	/* color: var(--fg-color); */
 }
 
-details > :first-child {
+/* details > :first-child {
 	margin-bottom: 1em;
-}
+} */
 
 label {
 	margin-bottom: 3px;
@@ -686,6 +720,10 @@ label {
 	width: 100%;
 	margin-top: 0;
 	padding: 3px 0;
+}
+
+main:last-child {
+	margin-bottom: 5em;
 }
 
 </style>
