@@ -8,6 +8,7 @@ const asyncstream = require('ministreamiterator')
 const bodyParser = require('body-parser')
 const randomWords = require('random-words')
 const accepts = require('accepts')
+const {inspect} = require('util')
 
 // import sirv from 'sirv'
 // import polka, { Middleware } from 'polka'
@@ -15,6 +16,12 @@ const accepts = require('accepts')
 
 const PORT = process.env.PORT || 3333
 const SAVE_FILE = process.env.SAVE_FILE || 'rooms.json'
+const LOG_FILE = 'messages.log'
+
+const log_stream = fs.createWriteStream(LOG_FILE, {
+  flags: 'a',
+  encoding: 'utf-8',
+})
 
 const ARCHETOPICS = [
   'Truth', 'Human', 'Energy', 'Beauty', 'Beginning', 'End', 'Birth', 'Death',
@@ -27,14 +34,24 @@ const rand_int = x => Math.floor(Math.random() * x)
 // Map from room name => current room data.
 const rooms = new Map()
 
-const log = (req, ...args) => {
-  const reqIsReq = typeof req === 'object' && typeof req.connection === 'object'
+const log = (...args) => {
   console.log(
     new Date().toISOString(),
+    ...args
+  )
+
+  const f = a => (typeof a === 'string') ?
+    a : inspect(a, {depth:10, colors:false})
+  log_stream.write(`${new Date().toISOString()} ${args.map(f).join(' ')}\n`)
+}
+const log_req = (req, ...args) => {
+  const reqIsReq = typeof req === 'object' && typeof req.connection === 'object'
+  log(
     reqIsReq ? (req.headers['x-forwarded-for'] || req.connection.remoteAddress) : req,
     ...args
   )
 }
+log('server started', 123, {})
 
 const topic_from_name = name => {
   // We'll try and find an archetopic contained in the name.
@@ -142,7 +159,8 @@ const update_room = (name, fn) => {
 
   fn && fn(txn)
 
-  // console.log('appending val', patch)
+  log('sending patch', patch)
+
   for (const c of r.clients) {
     if (magister_dirty) {
       c.stream.append({
@@ -174,7 +192,7 @@ const update_room = (name, fn) => {
 
 const handle_events = async (req, res) => {
   const {room} = req.params
-  log(req, 'Got client for room', room)
+  log_req(req, 'Got client for room', room)
   // console.log(req.headers)
 
   res.writeHead(200, 'OK', {
@@ -203,7 +221,7 @@ const handle_events = async (req, res) => {
   })
 
   res.once('close', () => {
-    log(req, 'Closed connection to client for room', room)
+    log_req(req, 'Closed connection to client for room', room)
     connected = false
     update_room(room, txn => {
       txn.set('last_used', Date.now())
@@ -291,7 +309,7 @@ const handle_configure = (req, res) => {
             txn.set('start_time', null)
             txn.set('paused_progress', null)
           }
-          log(req, `Game in room ${room} entered state ${v}`)
+          log_req(req, `Game in room ${room} entered state ${v}`)
         }
 
         txn.set(k, v)
@@ -423,5 +441,6 @@ process.on('unhandledRejection', e => {
 process.on('exit', () => {
   // console.log('exit')
   save()
+  log_stream.end()
 })
 
