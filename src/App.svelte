@@ -24,6 +24,7 @@ export let _self_id: string
 export let _active_sessions: number
 export let _magister: true | null
 export let _clock_offset: number
+export let clock: SvelteStore<number>
 
 // let game_completed = false // Derived from other properties
 
@@ -125,6 +126,10 @@ $: {
 			topic_text.innerText = game_config.topic
 		}
 	}
+}
+
+$: {
+	// console.log('clock', $clock)
 }
 
 // Could make configurable. Eh.
@@ -243,24 +248,29 @@ let current_stage: GameStage | null = null, current_stage_idx: number = -1, offs
 $: console.log('current stage', current_stage)
 // $: console.log('idx', current_stage_idx)
 
-const tick = (play_audio: boolean) => {
-	console.log('tick')
+const tick = (play_audio: boolean, time_ms: number) => {
+	// console.log('tick')
 	// console.log('state', state, 'completed', state && state.complete)
 
-	const time = state === 'playing' ? Date.now() + _clock_offset - game_config.start_time
+	const time = state === 'playing' ? Math.max(0, time_ms + _clock_offset - game_config.start_time)
 		: state === 'paused' ? game_config.paused_progress!
 		: 0
+
 	const {stage: new_stage, stage_idx: new_stage_idx, offset_sec: new_offs} = get_current_stage(time)
 	// state_label = state.label
 
 	offset_sec = new_offs
 	if (new_stage !== current_stage) {
-		console.log('state changed', new_stage.label, new_stage.type === 'complete')
+		console.log('state changed', new_stage.label, new_stage.type === 'complete', current_stage_idx, new_stage_idx)
 
 		// This happens sometimes with other kinds of configuration changes -
 		// eg if a user enters or leaves the room, or the room is reconfigured.
-		// Only make a sound if the *stage* changes.
-		let changed = current_stage == null || (new_stage.id ?? new_stage.type) !== (current_stage.id ?? current_stage.type)
+		// Only make a sound if the *stage* changes (and moves forward).
+		let changed = current_stage == null
+			|| (
+				(new_stage.id ?? new_stage.type) !== (current_stage.id ?? current_stage.type)
+				&& new_stage_idx > current_stage_idx
+			)
 		// console.log(new_stage, current_stage, changed)
 
 		current_stage = new_stage
@@ -270,37 +280,73 @@ const tick = (play_audio: boolean) => {
 
 		if (play_audio && !new_stage.no_sound && changed) {
 			const sound = (current_stage.type === 'complete' || current_stage.type === 'contemplation')
-			? complete_audio
-			: round_audio
+				? complete_audio
+				: round_audio
 
 			playSound(sound)
 		}
 	}
 }
 
-let timer: number | null | any // Timeout?
+
+let initial_render = false
+$: {
+	// Kinda gross.
+	if (!initial_render && state !== 'loading') {
+		tick(false, 0)
+		initial_render = true
+	}
+}
+
 $: {
 	// Sadly we can't use internal_state here because it generates a cyclic dependancy.
-	let completed = current_stage ? current_stage.type === 'complete' : false
+	// let completed = current_stage ? current_stage.type === 'complete' : false
 	// console.log('xx', state, timer, completed, current_stage)
 
 	// if (state !== 'loading') tick(false)
 
-	if (state === 'playing' && timer == null && !completed) {
-		// setTimeout needed to get around some weird race condition.
-		// There's probably better ways to structure this :/
-		setTimeout(() => tick(false))
-		timer = setInterval(() => {
-			tick(true)
-		}, 1000)
-	} else if ((completed || state !== 'playing') && timer != null) {
-		console.log('cancelled interval timer')
-		clearInterval(timer)
-		timer = null
-	} else if (state === 'waiting' || state === 'paused') {
-		setTimeout(() => tick(false))
-	}
+	tick(true, $clock)
+
+	// if (state === 'playing' && !running && !completed) {
+	// 	// setTimeout needed to get around some weird race condition.
+	// 	// There's definitely better ways to structure this :/
+
+	// 	setTimeout(() => tick(false))
+	// 	timer = setInterval(() => {
+	// 		tick(true)
+	// 	}, 1000)
+	// } else if ((completed || state !== 'playing') && running) {
+	// 	console.log('cancelled interval timer')
+	// 	clearInterval(timer)
+	// 	timer = null
+	// } else if (state === 'waiting' || state === 'paused') {
+	// 	setTimeout(() => tick(false))
+	// }
 }
+
+// let timer: number | null | any // Timeout?
+// $: {
+// 	// Sadly we can't use internal_state here because it generates a cyclic dependancy.
+// 	let completed = current_stage ? current_stage.type === 'complete' : false
+// 	// console.log('xx', state, timer, completed, current_stage)
+
+// 	// if (state !== 'loading') tick(false)
+
+// 	if (state === 'playing' && timer == null && !completed) {
+// 		// setTimeout needed to get around some weird race condition.
+// 		// There's probably better ways to structure this :/
+// 		setTimeout(() => tick(false))
+// 		timer = setInterval(() => {
+// 			tick(true)
+// 		}, 1000)
+// 	} else if ((completed || state !== 'playing') && timer != null) {
+// 		console.log('cancelled interval timer')
+// 		clearInterval(timer)
+// 		timer = null
+// 	} else if (state === 'waiting' || state === 'paused') {
+// 		setTimeout(() => tick(false))
+// 	}
+// }
 
 let game_completed: boolean
 $: {
@@ -521,7 +567,7 @@ body {
 			<!-- iOS eats margin at the bottom of the page for some reason -->
 			<div style='padding-bottom: 4em;'></div>
 		{:else}
-			<p class='config'>Magister Ludi is managing this game.</p>
+			<!-- <p id='magister_managed'>Magister Ludi is managing this game.</p> -->
 		{/if}
 	{/if}
 </main>
@@ -728,6 +774,11 @@ label {
 	margin-top: 0;
 	padding: 3px 0;
 }
+
+/* #magister_managed {
+	margin: 0 auto;
+	opacity: 40%;
+} */
 
 main:last-child {
 	margin-bottom: 5em;

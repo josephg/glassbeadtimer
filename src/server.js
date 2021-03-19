@@ -183,12 +183,15 @@ const update_room = (name, fn) => {
         game_config: r.game_config,
         _active_sessions: r.clients.size + new_clients.length,
         _magister: r.magister_id == null ? null : c.cookie_id === r.magister_id,
-        _server_time: Date.now(),
+        _server_time: get_time_ms(),
+        _server_time_clock: Date.now(),
       }
     })
     r.clients.add(c)
   }
 }
+
+const get_time_ms = () => Number(process.hrtime.bigint() / 1000000n)
 
 const handle_events = async (req, res) => {
   const {room} = req.params
@@ -231,14 +234,15 @@ const handle_events = async (req, res) => {
   })
 
   ;(async () => {
-    // 30 second heartbeats to avoid timeouts
+    // This used to be the heartbeat code. Now its used to tick the gbg timer.
     while (true) {
-      await new Promise(res => setTimeout(res, 30*1000))
+      // await new Promise(res => setTimeout(res, 30*1000))
+      await new Promise(res => setTimeout(res, 1000))
 
       if (!connected) break
-      
-      res.write(`event: heartbeat\ndata: \n\n`);
-      // res.write(`data: {}\n\n`)
+
+      // res.write(`event: heartbeat\ndata: \n\n`);
+      res.write(`event: tick\ndata: ${get_time_ms()}\n\n`)
       res.flush()
     }
   })()
@@ -298,12 +302,12 @@ const handle_configure = (req, res) => {
           // TODO: Clean this up. Yikes.
           if (v === 'paused') {
             // ms since the game started.
-            txn.set('paused_progress', Date.now() - txn.game_config.start_time)
+            txn.set('paused_progress', get_time_ms() - txn.game_config.start_time)
           } else if (v === 'playing') {
             if (txn.game_config.paused_progress != null) {
-              txn.set('start_time', Date.now() - txn.game_config.paused_progress)
+              txn.set('start_time', get_time_ms() - txn.game_config.paused_progress)
               txn.set('paused_progress', null)
-            } else txn.set('start_time', Date.now())
+            } else txn.set('start_time', get_time_ms())
 
           } else if (v === 'waiting') {
             txn.set('start_time', null)

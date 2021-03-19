@@ -1,3 +1,4 @@
+import {writable} from 'svelte/store'
 import App from './App.svelte';
 import type { GameConfig, State } from './shared';
 
@@ -12,6 +13,8 @@ const self_id = new Array(20).fill(null).map(() => alphabet[Math.floor(Math.rand
 
 // This set of fields should have bind:input= instead of input= in App.svelte.
 const debounced_fields = new Set(['topic', 'players', 'rounds', 'seconds_per_bead', 'seconds_between_bead'])
+
+const clock = writable(0)
 
 let state: State = {
   // room,
@@ -40,6 +43,7 @@ const app = new App({
   props: {
     room,
     connection: 'loading',
+    clock,
     ...state
   }
 })
@@ -65,6 +69,9 @@ const merge = (server_patch: any) => {
     if (k === 'game_config') {
       merge_config(v, is_bounce)
       local_patch[k] = state.game_config
+    } else if (k === '_server_time') {
+      // TODO: Merge this with the code for ticks when its not 1am.
+      clock.set(v)
     } else if (state[k as keyof State] !== v) {
       local_patch[k] = v
       ;(state as any)[k] = v
@@ -90,23 +97,29 @@ const eventsUrl = `${room}`
         console.log('OPEN')
         app.$set({connection: 'connected'})
       }
-      source.onmessage = message => {
-        
-        const data = JSON.parse(message.data).data
-        console.log('Got', data)
-        
-        if (data._server_time) {
-          // Date.now() + offset = _server_time
-          const offset = data._server_time - Date.now()
-          if (offset > 800) {
-            console.warn(`Clock skew detected of ${offset}ms`)
-            data._clock_offset = offset
-          }
 
-          delete data._server_time
-        }
-        // app.$set(data)
-        // setTimeout(() => merge(data), 1000)
+      source.addEventListener('tick', _m => {
+        const m = _m as MessageEvent
+        const time = parseInt(m.data)
+        clock.set(time)
+        // console.log('tick', time)
+      })
+
+      source.onmessage = message => {
+
+        const data = JSON.parse(message.data).data
+        // console.log('Got', data)
+
+        // if (data._server_time) {
+        //   // Date.now() + offset = _server_time
+        //   const offset = data._server_time - Date.now()
+        //   if (offset > 800) {
+        //     console.warn(`Clock skew detected of ${offset}ms`)
+        //     data._clock_offset = offset
+        //   }
+
+        //   delete data._server_time
+        // }
         merge(data)
       }
       source.onerror = err => {
