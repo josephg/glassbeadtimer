@@ -299,29 +299,7 @@ $: {
 }
 
 $: {
-	// Sadly we can't use internal_state here because it generates a cyclic dependancy.
-	// let completed = current_stage ? current_stage.type === 'complete' : false
-	// console.log('xx', state, timer, completed, current_stage)
-
-	// if (state !== 'loading') tick(false)
-
 	tick(true, $clock)
-
-	// if (state === 'playing' && !running && !completed) {
-	// 	// setTimeout needed to get around some weird race condition.
-	// 	// There's definitely better ways to structure this :/
-
-	// 	setTimeout(() => tick(false))
-	// 	timer = setInterval(() => {
-	// 		tick(true)
-	// 	}, 1000)
-	// } else if ((completed || state !== 'playing') && running) {
-	// 	console.log('cancelled interval timer')
-	// 	clearInterval(timer)
-	// 	timer = null
-	// } else if (state === 'waiting' || state === 'paused') {
-	// 	setTimeout(() => tick(false))
-	// }
 }
 
 // let timer: number | null | any // Timeout?
